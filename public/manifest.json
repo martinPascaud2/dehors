@@ -25,6 +25,6 @@
   "background_color": "transparent",
   "start_url": "/",
   "scope": "/",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait"
 }
