@@ -17,6 +17,16 @@ export const metadata = {
   description: "Jeux sociaux extérieurs",
 };
 
+export const viewport = {
+  width: "device-width",
+  height: "device-height",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#000000",
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
