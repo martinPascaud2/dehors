@@ -38,7 +38,7 @@ export default function RootLayout({ children }) {
         name="apple-mobile-web-app-status-bar-style"
         content="black-translucent"
       ></meta>
-      <meta name="theme-color" content="#000000"></meta>
+      {/* <meta name="theme-color" content="#000000"></meta> */}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen`}
       >
