@@ -15,44 +15,28 @@ export const metadata = {
   manifest: "/manifest.json",
   title: "Dehors",
   description: "Jeux sociaux extérieurs",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: "no",
-    viewportFit: "cover",
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Dehors",
-  },
-  themeColor: "#000000",
 };
 
-// export const viewport = {
-//   width: "device-width",
-//   height: "device-height",
-//   initialScale: 1,
-//   maximumScale: 1,
-//   userScalable: false,
-//   viewportFit: "cover",
-//   // themeColor: "#000000",
-//   themeColor: "transparent",
-// };
+export const viewport = {
+  width: "device-width",
+  height: "device-height",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#000000",
+};
 
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
-      {/* <meta name="apple-mobile-web-app-capable" content="yes" />
-      <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-      <meta name="mobile-web-app-capable" content="yes"></meta> */}
-      {/* <meta name="mobile-web-app-capable" content="yes"></meta>
+      <meta name="mobile-web-app-capable" content="yes"></meta>
       <meta
         name="apple-mobile-web-app-status-bar-style"
         content="black-translucent"
-      ></meta> */}
-      {/* <meta name="theme-color" content="#000000"></meta> */}
+      ></meta>
+      <meta name="theme-color" content="#000000"></meta>
+
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen`}
       >
