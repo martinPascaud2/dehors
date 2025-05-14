@@ -185,8 +185,6 @@ model User {
   esquisseLastParams           String?                   @db.LongText
   memoryLastParams             String?                   @db.LongText
   ptitbacLastParams            String?                   @db.LongText
-  triaction_peek_LastParams    String?                   @db.LongText
-  triaction_random_LastParams  String?                   @db.LongText
   params                       String?                   @db.LongText
   tableauLastParams            String?                   @db.LongText
   tableauSortedResponses       String?                   @db.LongText
@@ -198,6 +196,7 @@ model User {
   tmpToken                     String?
   huntingPosition              String?                   @db.LongText
   chasseLastParams             String?                   @db.LongText
+  triactionLastParams          String?                   @db.LongText
   DrawLink                     DrawLink[]
   DrawingWordsOnUsers          DrawingWordsOnUsers[]
   Friend_Friend_friendIdToUser Friend[]                  @relation("Friend_friendIdToUser")
