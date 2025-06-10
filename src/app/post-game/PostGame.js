@@ -6,119 +6,12 @@ import { useSearchParams } from "next/navigation";
 
 import { postGamesList } from "@/assets/globals";
 
-import { ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
-
-import formatDate from "@/utils/formatDate";
 import usePreventBackSwipe from "@/utils/usePreventBackSwipe";
 
 import ThreeSmoke from "@/components/Room/ThreeSmoke";
 import { StaticNextStep } from "@/components/NextStep";
 import ControlButton from "@/components/ControlButton";
-import WrittenCard from "@/categories/[categorie]/(games)/defi/WrittenCard";
-import CountDown from "@/components/CountDown";
 import LoadingRoomOctagon from "@/components/Room/LoadingRoomOctagon";
-
-const TriactionPG = ({ postGame, userName }) => {
-  const date = formatDate(postGame.createdAt);
-  const { actions } = postGame.gameData;
-  const isAdmin = postGame.admin === userName;
-
-  const [triggeredGamers, setTriggeredGamers] = useState(
-    Object.keys(actions).reduce((acc, gamerName) => {
-      acc[gamerName] = false;
-      return acc;
-    }, {})
-  );
-
-  return (
-    <div className="flex flex-col items-center w-full">
-      <div>{date}</div>
-      <CountDown
-        finishCountdownDate={
-          new Date(postGame.createdAt.getTime() + 10 * 24 * 60 * 60 * 1000)
-        }
-        label="Fin du jeu dans"
-      />
-      <div className="flex flex-col items-center w-full">
-        {Object.entries(actions).map(([gamer, actions], i) => {
-          const canModify = gamer === userName || isAdmin;
-
-          const dones = {
-            backed: actions.backed.done,
-            kept: actions.kept.done,
-            proposedBack: actions.proposedBack.done,
-          };
-
-          const backed = {
-            type: "backed",
-            label: `Action renvoyée par ${actions.backed.from}`,
-            action: actions.backed.action,
-          };
-          const kept = {
-            type: "kept",
-            label: `Proposition de ${actions.kept.from} acceptée`,
-            action: actions.kept.action,
-          };
-          const proposedBack = {
-            type: "proposedBack",
-            label: `Proposition non acceptée par ${actions.proposedBack.from}`,
-            action: actions.proposedBack.action,
-          };
-
-          return (
-            <div key={i} className="flex flex-col items-center w-full z-0">
-              <button
-                onClick={() =>
-                  setTriggeredGamers((prevTriggered) => {
-                    const newTriggered = { ...prevTriggered };
-                    newTriggered[gamer] = !prevTriggered[gamer];
-                    return newTriggered;
-                  })
-                }
-                className="border border-blue-300 bg-blue-100 p-1 w-20 m-2 flex"
-              >
-                <div>{gamer}</div>
-                <div className="ml-auto">
-                  {triggeredGamers[gamer] ? (
-                    <ChevronDownIcon className="h-6 w-5" />
-                  ) : (
-                    <ChevronRightIcon className="h-6 w-5" />
-                  )}
-                </div>
-              </button>
-
-              {triggeredGamers[gamer] && (
-                <>
-                  <WrittenCard
-                    data={backed}
-                    done={dones.backed}
-                    postGame={postGame}
-                    gamer={gamer}
-                    canModify={canModify}
-                  />
-                  <WrittenCard
-                    data={kept}
-                    done={dones.kept}
-                    postGame={postGame}
-                    gamer={gamer}
-                    canModify={canModify}
-                  />
-                  <WrittenCard
-                    data={proposedBack}
-                    done={dones.proposedBack}
-                    postGame={postGame}
-                    gamer={gamer}
-                    canModify={canModify}
-                  />
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
 
 export default function PostGame({ user, postGames }) {
   usePreventBackSwipe();
@@ -311,15 +204,15 @@ export default function PostGame({ user, postGames }) {
             {postGames[selectedGame].map((postGame, i) => {
               let ret;
               switch (postGame.gameName) {
-                case "triaction":
-                  ret = (
-                    <TriactionPG
-                      key={i}
-                      postGame={postGame}
-                      userName={user.name}
-                    />
-                  );
-                  break;
+                // case "triaction":
+                //   ret = (
+                //     <TriactionPG
+                //       key={i}
+                //       postGame={postGame}
+                //       userName={user.name}
+                //     />
+                //   );
+                //   break;
                 default:
                   ret = null;
               }

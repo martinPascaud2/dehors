@@ -54,7 +54,7 @@ export async function launchGame({
   });
 
   let newData;
-  if (options.mode === "Chasse") {
+  if (options.mode === "Hunted") {
     newData = {
       admin: startedRoom.admin,
       viceAdmin,

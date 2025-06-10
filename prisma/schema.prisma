@@ -24,6 +24,7 @@ model User {
   room                   Room?                     @relation(fields: [roomId], references: [id])
   roomId                 Int?
   lastPlayed             String?
+  dhLastPlayed           String?
   alreadyActionouverite  Json?
   alreadyUndercovertheme UndercoverthemesOnUsers[]
   alreadyPtitbactheme    PtitbacthemesOnUsers[]
@@ -36,7 +37,7 @@ model User {
   ptitbacLastParams      Json?
   undercoverLastParams   Json?
   triactionLastParams    Json?
-  chasseLastParams       Json?
+  huntedLastParams       Json?
   tableauLastParams      Json?
   png                    String                    @default("") @db.Text
   drawChain              DrawLink[]

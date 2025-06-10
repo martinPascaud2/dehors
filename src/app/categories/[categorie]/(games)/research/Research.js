@@ -29,7 +29,7 @@ export default function Research({
   const removeGamers = useCallback(
     ({ roomId, roomToken, gameData, onlineGamers, admins, arrivalsOrder }) => {
       switch (mode) {
-        case "Chasse":
+        case "Hunted":
           return removeStandardGamers({
             roomId,
             roomToken,
@@ -45,7 +45,7 @@ export default function Research({
 
   return (
     <>
-      {mode === "Chasse" && (
+      {mode === "Hunted" && (
         <Hunting
           roomId={roomId}
           roomToken={roomToken}

@@ -1440,7 +1440,7 @@ export default function Room({
                     : "opacity-0 animate-[fadeOut_1.5s_ease-in-out]"
                 } relative h-full w-full`}
               >
-                <div className="absolute top-[2dvh] w-full h-[4.5dvh] flex justify-center items-center">
+                {/* <div className="absolute top-[2dvh] w-full h-[4.5dvh] flex justify-center items-center">
                   {categorie !== "grouping" &&
                     categoriesIcons &&
                     (!gameData.isSearching || adminSelectedCategorie) && (
@@ -1462,12 +1462,12 @@ export default function Room({
                         priority
                       />
                     )}
-                </div>
+                </div> */}
 
                 <div className="absolute left-1/2 translate-x-[-50%] h-[10dvh] w-full">
                   <div className="absolute top-[5dvh] w-full flex justify-center items-center h-full">
                     {(isAdmin || searchIsAdmin) && !gameData.isSearching ? (
-                      <div className="h-[4dvh] w-[4dvh]">
+                      <div className="h-[4dvh] w-[4dvh] collapse">
                         <ChooseAnotherGame
                           setShowPlayers={setShowPlayers}
                           setShowConfig={setShowConfig}
@@ -1506,7 +1506,7 @@ export default function Room({
                       )}
                     </div>
 
-                    <div className="h-[4dvh] w-[4dvh] flex justify-start items-center text-amber-700">
+                    <div className="h-[4dvh] w-[4dvh] flex justify-start items-center text-amber-700 collapse">
                       <p
                         className="text-4xl"
                         style={{

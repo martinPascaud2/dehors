@@ -2334,9 +2334,10 @@ export default function Categories({
                               userId: user.id,
                               out: true,
                             });
-                            router.push(
-                              user.lastPlayed || "/categories/grouping/grouping"
-                            );
+                            router.push("/categories/categorie5/research");
+                            // router.push(
+                            //   user.lastPlayed || "/categories/grouping/grouping"
+                            // );
                           }}
                           className="z-30"
                         >

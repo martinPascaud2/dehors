@@ -19,7 +19,7 @@ export default function ResearchOptions({
   //   gamersNumber,
 }) {
   const [mode, setMode] = useState(
-    searchMode || (isAdmin && lastMode?.mode) || options.mode || "Chasse"
+    searchMode || (isAdmin && lastMode?.mode) || options.mode || "Hunted"
   );
   const [modeList, setModeList] = useState([]);
   const [lastParams, setLastParams] = useState();
@@ -37,7 +37,7 @@ export default function ResearchOptions({
     };
     isAdmin && loadLasts();
 
-    setModeList([{ mode: "Chasse", text: "Chasse" }]);
+    setModeList([{ mode: "Hunted", text: "Hunted" }]);
   }, [mode, setOptions, isAdmin, userId]);
 
   useEffect(() => {

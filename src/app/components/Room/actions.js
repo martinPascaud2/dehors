@@ -11,7 +11,10 @@ import { gamesRefs } from "@/assets/globals";
 const putLastPlayed = async ({ userId, game }) => {
   const categorie = gamesRefs[game].categorie;
   const lastPlayed = `/categories/${categorie}/${game}`;
-  await prisma.user.update({ where: { id: userId }, data: { lastPlayed } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { dhLastPlayed: lastPlayed },
+  });
 };
 
 export async function serverCreate(
