@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/app/api/cron",
+      "schedule": "0 0 1 * *"
+    }
+  ],
+  "functions": {
+    "app/src/app/categories/[categorie]/memory": {
+      "maxDuration": 60
+    }
+  }
+}

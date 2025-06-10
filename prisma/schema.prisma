@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,6 +8,118 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     Int                       @id @default(autoincrement())
+  email                  String                    @unique
+  name                   String                    @unique
+  password               String
+  tmpToken               String?
+  creationDate           DateTime                  @db.Date
+  params                 Json?
+  lastControlPanel       DateTime?                 @db.DateTime(0)
+  friends                Friend[]                  @relation("userFriends")
+  friendOf               Friend[]                  @relation("userFriendOf")
+  room                   Room?                     @relation(fields: [roomId], references: [id])
+  roomId                 Int?
+  lastPlayed             String?
+  alreadyActionouverite  Json?
+  alreadyUndercovertheme UndercoverthemesOnUsers[]
+  alreadyPtitbactheme    PtitbacthemesOnUsers[]
+  alreadyDrawingWords    DrawingWordsOnUsers[]
+  ptitbacResponses       String                    @default("")
+  pictionaryLastParams   Json?
+  esquisseLastParams     Json?
+  memoryLastParams       Json?
+  podiumLastParams       Json?
+  ptitbacLastParams      Json?
+  undercoverLastParams   Json?
+  triactionLastParams    Json?
+  chasseLastParams       Json?
+  tableauLastParams      Json?
+  png                    String                    @default("") @db.Text
+  drawChain              DrawLink[]
+  unoCount               Int?
+  tableauResponses       TableauResponse[]
+  tableauSortedResponses Json?
+  tableauSecondSorted    Json?
+  tableauRevelationSeen  Boolean                   @default(false)
+  podiumTops             Json?
+  huntingPosition        Json?
+  postGames              UserPostGame[]
+}
+
+model Multiguest {
+  id                     String            @id
+  png                    String            @default("") @db.Text
+  drawChain              DrawLink[]
+  unoCount               Int?
+  tableauResponses       TableauResponse[]
+  tableauSortedResponses Json?
+  tableauSecondSorted    Json?
+  tableauRevelationSeen  Boolean           @default(false)
+  podiumTops             Json?
+  huntingPosition        Json?
+}
+
+model PostGame {
+  id        Int            @id @default(autoincrement())
+  admin     String
+  gameName  String
+  gameData  Json?
+  createdAt DateTime       @default(now())
+  users     UserPostGame[]
+}
+
+model UserPostGame {
+  userId     Int
+  postGameId Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postGame   PostGame @relation(fields: [postGameId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postGameId])
+}
+
+model Friend {
+  id         Int     @id @default(autoincrement())
+  user       User    @relation("userFriends", fields: [userId], references: [id])
+  userId     Int
+  friend     User    @relation("userFriendOf", fields: [friendId], references: [id])
+  friendId   Int
+  customName String?
+}
+
+model Room {
+  id               Int           @id @default(autoincrement())
+  creationDate     DateTime      @db.DateTime(0)
+  private          Boolean       @default(false)
+  game             String
+  options          Json?
+  token            String
+  admin            String
+  adminLocation    Json?
+  viceAdmin        String?
+  gamers           Json?
+  guests           Json?
+  multiGuests      Json?
+  arrivalsOrder    RoomArrival[]
+  started          Boolean       @default(false)
+  actionInProgress Boolean       @default(false)
+  gameData         Json?
+  haveLeft         Json?
+  User             User[]
+}
+
+model RoomArrival {
+  id          Int      @id @default(autoincrement())
+  roomId      Int
+  Room        Room     @relation(fields: [roomId], references: [id])
+  userName    String
+  arrivalTime DateTime @default(now())
+
+  @@unique([roomId, userName])
+  @@index([roomId])
 }
 
 model Actionouverite {
@@ -16,69 +131,26 @@ model Actionouverite {
   adult      Boolean @default(false)
 }
 
-model DrawLink {
-  id           Int         @id @default(autoincrement())
-  userName     String
-  data         String      @default("") @db.Text
-  type         String
-  userId       Int?
-  multiguestId String?
-  Multiguest   Multiguest? @relation(fields: [multiguestId], references: [id])
-  User         User?       @relation(fields: [userId], references: [id])
-
-  @@index([multiguestId], map: "DrawLink_multiguestId_fkey")
-  @@index([userId], map: "DrawLink_userId_fkey")
+model Undercoverword {
+  id      Int             @id @default(autoincrement())
+  word    String
+  themeId Int
+  theme   Undercovertheme @relation(fields: [themeId], references: [id])
 }
 
-model DrawingWord {
-  id                  Int                   @id @default(autoincrement())
-  word                String
-  DrawingWordsOnUsers DrawingWordsOnUsers[]
+model Undercovertheme {
+  id    Int                       @id @default(autoincrement())
+  theme String
+  words Undercoverword[]
+  users UndercoverthemesOnUsers[]
 }
 
-model DrawingWordsOnUsers {
-  id            Int         @id @default(autoincrement())
-  userId        Int
-  drawingWordId Int
-  DrawingWord   DrawingWord @relation(fields: [drawingWordId], references: [id])
-  User          User        @relation(fields: [userId], references: [id])
-
-  @@index([drawingWordId], map: "DrawingWordsOnUsers_drawingWordId_fkey")
-  @@index([userId], map: "DrawingWordsOnUsers_userId_fkey")
-}
-
-model Friend {
-  id                         Int     @id @default(autoincrement())
-  userId                     Int
-  friendId                   Int
-  customName                 String?
-  User_Friend_friendIdToUser User    @relation("Friend_friendIdToUser", fields: [friendId], references: [id])
-  User_Friend_userIdToUser   User    @relation("Friend_userIdToUser", fields: [userId], references: [id])
-
-  @@index([friendId], map: "Friend_friendId_fkey")
-  @@index([userId], map: "Friend_userId_fkey")
-}
-
-model Multiguest {
-  id                     String            @id
-  png                    String            @default("") @db.Text
-  unoCount               Int?
-  tableauSortedResponses String?           @db.LongText
-  tableauRevelationSeen  Boolean           @default(false)
-  tableauSecondSorted    String?           @db.LongText
-  podiumTops             String?           @db.LongText
-  huntingPosition        String?           @db.LongText
-  DrawLink               DrawLink[]
-  TableauResponse        TableauResponse[]
-}
-
-model PostGame {
-  id           Int            @id @default(autoincrement())
-  gameData     String?        @db.LongText
-  createdAt    DateTime       @default(now())
-  gameName     String
-  admin        String
-  UserPostGame UserPostGame[]
+model UndercoverthemesOnUsers {
+  id                Int             @id @default(autoincrement())
+  userId            Int
+  undercoverthemeId Int
+  user              User            @relation(fields: [userId], references: [id])
+  undercovertheme   Undercovertheme @relation(fields: [undercoverthemeId], references: [id])
 }
 
 model Ptitbactheme {
@@ -91,136 +163,46 @@ model PtitbacthemesOnUsers {
   id             Int          @id @default(autoincrement())
   userId         Int
   ptitbacthemeId Int
-  Ptitbactheme   Ptitbactheme @relation(fields: [ptitbacthemeId], references: [id])
-  User           User         @relation(fields: [userId], references: [id])
-
-  @@index([ptitbacthemeId], map: "PtitbacthemesOnUsers_ptitbacthemeId_fkey")
-  @@index([userId], map: "PtitbacthemesOnUsers_userId_fkey")
+  user           User         @relation(fields: [userId], references: [id])
+  ptitbactheme   Ptitbactheme @relation(fields: [ptitbacthemeId], references: [id])
 }
 
-model Room {
-  id            Int           @id @default(autoincrement())
-  private       Boolean       @default(false)
-  game          String
-  token         String
-  admin         String
-  adminLocation String?       @db.LongText
-  gamers        String?       @db.LongText
-  guests        String?       @db.LongText
-  multiGuests   String?       @db.LongText
-  started       Boolean       @default(false)
-  gameData      String?       @db.LongText
-  creationDate  DateTime      @db.DateTime(0)
-  options       String?       @db.LongText
-  haveLeft      String?       @db.LongText
-  viceAdmin     String?
-  RoomArrival   RoomArrival[]
-  User          User[]
+model DrawingWord {
+  id                  Int                   @id @default(autoincrement())
+  word                String
+  DrawingWordsOnUsers DrawingWordsOnUsers[]
 }
 
-model RoomArrival {
-  id          Int      @id @default(autoincrement())
-  roomId      Int
-  userName    String
-  arrivalTime DateTime @default(now())
-  Room        Room     @relation(fields: [roomId], references: [id])
-
-  @@unique([roomId, userName])
-  @@index([roomId])
+model DrawingWordsOnUsers {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  drawingWordId Int
+  user          User        @relation(fields: [userId], references: [id])
+  drawingWord   DrawingWord @relation(fields: [drawingWordId], references: [id])
 }
 
-model TableauResponse {
+model DrawLink {
   id           Int         @id @default(autoincrement())
-  response     String
-  userId       Int?
-  theme        String
-  multiguestId String?
-  Multiguest   Multiguest? @relation(fields: [multiguestId], references: [id])
+  userName     String
+  data         String      @default("") @db.Text
+  type         String
   User         User?       @relation(fields: [userId], references: [id])
-
-  @@index([multiguestId], map: "TableauResponse_multiguestId_fkey")
-  @@index([userId], map: "TableauResponse_userId_fkey")
-}
-
-model Undercovertheme {
-  id                      Int                       @id @default(autoincrement())
-  theme                   String
-  UndercoverthemesOnUsers UndercoverthemesOnUsers[]
-  Undercoverword          Undercoverword[]
-}
-
-model UndercoverthemesOnUsers {
-  id                Int             @id @default(autoincrement())
-  userId            Int
-  undercoverthemeId Int
-  Undercovertheme   Undercovertheme @relation(fields: [undercoverthemeId], references: [id])
-  User              User            @relation(fields: [userId], references: [id])
-
-  @@index([undercoverthemeId], map: "UndercoverthemesOnUsers_undercoverthemeId_fkey")
-  @@index([userId], map: "UndercoverthemesOnUsers_userId_fkey")
-}
-
-model Undercoverword {
-  id              Int             @id @default(autoincrement())
-  word            String
-  themeId         Int
-  Undercovertheme Undercovertheme @relation(fields: [themeId], references: [id])
-
-  @@index([themeId], map: "Undercoverword_themeId_fkey")
-}
-
-model User {
-  id                           Int                       @id @default(autoincrement())
-  email                        String                    @unique
-  name                         String                    @unique
-  password                     String
-  creationDate                 DateTime                  @db.Date
-  roomId                       Int?
-  alreadyActionouverite        String?                   @db.LongText
-  ptitbacResponses             String                    @default("")
-  png                          String                    @default("") @db.Text
-  unoCount                     Int?
-  lastControlPanel             DateTime?                 @db.DateTime(0)
-  pictionaryLastParams         String?                   @db.LongText
-  esquisseLastParams           String?                   @db.LongText
-  memoryLastParams             String?                   @db.LongText
-  ptitbacLastParams            String?                   @db.LongText
-  params                       String?                   @db.LongText
-  tableauLastParams            String?                   @db.LongText
-  tableauSortedResponses       String?                   @db.LongText
-  tableauRevelationSeen        Boolean                   @default(false)
-  tableauSecondSorted          String?                   @db.LongText
-  podiumLastParams             String?                   @db.LongText
-  podiumTops                   String?                   @db.LongText
-  lastPlayed                   String?
-  tmpToken                     String?
-  huntingPosition              String?                   @db.LongText
-  chasseLastParams             String?                   @db.LongText
-  triactionLastParams          String?                   @db.LongText
-  DrawLink                     DrawLink[]
-  DrawingWordsOnUsers          DrawingWordsOnUsers[]
-  Friend_Friend_friendIdToUser Friend[]                  @relation("Friend_friendIdToUser")
-  Friend_Friend_userIdToUser   Friend[]                  @relation("Friend_userIdToUser")
-  PtitbacthemesOnUsers         PtitbacthemesOnUsers[]
-  TableauResponse              TableauResponse[]
-  UndercoverthemesOnUsers      UndercoverthemesOnUsers[]
-  Room                         Room?                     @relation(fields: [roomId], references: [id])
-  UserPostGame                 UserPostGame[]
-
-  @@index([roomId], map: "User_roomId_fkey")
-}
-
-model UserPostGame {
-  userId     Int
-  postGameId Int
-  PostGame   PostGame @relation(fields: [postGameId], references: [id], onDelete: Cascade)
-  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([userId, postGameId])
-  @@index([postGameId], map: "UserPostGame_postGameId_fkey")
+  userId       Int?
+  Multiguest   Multiguest? @relation(fields: [multiguestId], references: [id])
+  multiguestId String?
 }
 
 model triactionAction {
   id     Int    @id @default(autoincrement())
   action String
+}
+
+model TableauResponse {
+  id           Int         @id @default(autoincrement())
+  theme        String
+  response     String
+  User         User?       @relation(fields: [userId], references: [id])
+  userId       Int?
+  Multiguest   Multiguest? @relation(fields: [multiguestId], references: [id])
+  multiguestId String?
 }

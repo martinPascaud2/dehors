@@ -1,0 +1,17 @@
+/* #reader { */
+/* height: 74vw !important; */
+/* } */
+
+/* video { */
+/* height: 74vw !important; */
+/* object-fit: cover;  */
+/* } */
+
+#reader {
+  height: 100% !important;
+}
+
+video {
+  height: 100% !important;
+  object-fit: cover;
+}

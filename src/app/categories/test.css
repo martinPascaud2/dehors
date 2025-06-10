@@ -1,0 +1,46 @@
+body {
+  overflow: hidden;
+}
+
+:root {
+  --dynamic-border-color: #9333ea;
+}
+
+.octagon {
+  width: 90vw;
+  height: 90vw;
+  background: var(--dynamic-border-color);
+  position: relative;
+}
+.octagon:before {
+  content: "";
+  width: 90vw;
+  height: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-bottom: 26.5vw solid var(--dynamic-border-color);
+  border-left: 26.5vw solid black;
+  border-right: 26.5vw solid black;
+}
+.octagon:after {
+  content: "";
+  width: 90vw;
+  height: 0;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  border-top: 26.5vw solid var(--dynamic-border-color);
+  border-left: 26.5vw solid black;
+  border-right: 26.5vw solid black;
+  z-index: -1;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
