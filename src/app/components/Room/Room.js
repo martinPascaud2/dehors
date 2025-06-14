@@ -56,6 +56,7 @@ import { IoIosPeople } from "react-icons/io";
 import { IoPersonAddSharp } from "react-icons/io5";
 import { IoMdArrowDropright } from "react-icons/io";
 import { LiaQrcodeSolid } from "react-icons/lia";
+import { FaRegHourglassHalf } from "react-icons/fa6";
 
 import "./room.css";
 
@@ -314,13 +315,13 @@ export default function Room({
           data.privacy !== undefined && setIsPrivate(data.privacy);
         });
 
-        subscribePresenceChannel({
-          userId: user.id,
-          userName: user.name,
-          status: "standard",
-          setOnlineGamers,
-          roomToken: newRoomToken,
-        });
+        // subscribePresenceChannel({
+        //   userId: user.id,
+        //   userName: user.name,
+        //   status: "standard",
+        //   setOnlineGamers,
+        //   roomToken: newRoomToken,
+        // });
 
         setRoomToken(newRoomToken);
         setUniqueName(user.name);
@@ -565,13 +566,13 @@ export default function Room({
           (await triggerGamers({ roomToken: token, gamers }),
           await triggerMultiguests({ roomToken: token, multiGuests }));
 
-        subscribePresenceChannel({
-          userId: user.id,
-          userName: uniqueUserName,
-          status: "standard",
-          setOnlineGamers,
-          roomToken: token,
-        });
+        // subscribePresenceChannel({
+        //   userId: user.id,
+        //   userName: uniqueUserName,
+        //   status: "standard",
+        //   setOnlineGamers,
+        //   roomToken: token,
+        // });
 
         setRoomToken(token);
         setUniqueName(uniqueUserName);
@@ -802,13 +803,13 @@ export default function Room({
       isStarted &&
       setOnlineGamers
     ) {
-      subscribePresenceChannel({
-        userId: id,
-        userName: uniqueName,
-        status: "multiGuest",
-        setOnlineGamers,
-        roomToken,
-      });
+      // subscribePresenceChannel({
+      //   userId: id,
+      //   userName: uniqueName,
+      //   status: "multiGuest",
+      //   setOnlineGamers,
+      //   roomToken,
+      // });
 
       setMultiGuestId(id);
       setMultiGuestDataId(
@@ -866,7 +867,8 @@ export default function Room({
     });
     if (gamer === uniqueName) {
       pusher.unsubscribe(`room-${roomToken}`);
-      pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+      pusherPresence &&
+        pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
     }
     if (!gamers) router.push("/");
 
@@ -882,7 +884,8 @@ export default function Room({
     });
     if (!multiGuests) {
       pusher.unsubscribe(`room-${roomToken}`);
-      pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+      pusherPresence &&
+        pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
       router.push("/");
     }
 
@@ -897,7 +900,8 @@ export default function Room({
         //tricky: router before
         localStorage.removeItem("reservedName");
         pusher.unsubscribe(`room-${roomToken}`);
-        pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+        pusherPresence &&
+          pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
         router.push("/categories");
         !user.multiGuest && (await cancelBack({ userId: user.id }));
       } catch (error) {
@@ -993,7 +997,8 @@ export default function Room({
     }
 
     pusher.unsubscribe(`room-${roomToken}`);
-    pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+    pusherPresence &&
+      pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
     router.push(
       `/categories/${adminSearchtCategorie}/${adminSearchtGame.path}/?mode=${adminSelectedMode.path}&changeGame=true&isAdmin=true`
     );
@@ -1062,7 +1067,8 @@ export default function Room({
         localStorage.setItem("localWidth", window.innerWidth);
 
         pusher.unsubscribe(`room-${roomToken}`);
-        pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+        pusherPresence &&
+          pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
 
         const href = `${gameData.nextGame.path}${
           user.multiGuest ? `&guestName=${user.name}` : ""
@@ -1075,111 +1081,111 @@ export default function Room({
   // ------------------------------
 
   // [admin + gamers] presence
-  useEffect(() => {
-    if (
-      !roomToken ||
-      (!user?.id && !user?.multiGuest) ||
-      !user?.name ||
-      isPresenceIntervalStartedRef.current ||
-      !presenceChannel
-    )
-      return;
+  // useEffect(() => {
+  //   if (
+  //     !roomToken ||
+  //     (!user?.id && !user?.multiGuest) ||
+  //     !user?.name ||
+  //     isPresenceIntervalStartedRef.current ||
+  //     !presenceChannel
+  //   )
+  //     return;
 
-    isPresenceIntervalStartedRef.current = true;
+  //   isPresenceIntervalStartedRef.current = true;
 
-    lastAdminPingRef.current = Date.now();
-    bindAdminOnlines({ setOnlineGamers, lastAdminPingRef });
+  //   lastAdminPingRef.current = Date.now();
+  //   bindAdminOnlines({ setOnlineGamers, lastAdminPingRef });
 
-    const { id, name, multiGuest } = user;
+  //   const { id, name, multiGuest } = user;
 
-    const send = async () => {
-      try {
-        await sendPresenceSign({
-          roomToken,
-          userName: name,
-          userId: id,
-          multiGuest: !!multiGuest,
-        });
+  //   const send = async () => {
+  //     try {
+  //       await sendPresenceSign({
+  //         roomToken,
+  //         userName: name,
+  //         userId: id,
+  //         multiGuest: !!multiGuest,
+  //       });
 
-        if (
-          lastAdminPingRef.current &&
-          adminNameRef.current &&
-          Date.now() - lastAdminPingRef.current > 40000
-        ) {
-          setOnlineGamers((prevOnlines) => {
-            const newOnlines = prevOnlines.filter(
-              (online) => online.userName !== adminNameRef.current
-            );
-            return newOnlines;
-          });
-        }
-      } catch (e) {
-        console.error("sendPresenceSign error:", e);
-      }
-    };
+  //       if (
+  //         lastAdminPingRef.current &&
+  //         adminNameRef.current &&
+  //         Date.now() - lastAdminPingRef.current > 40000
+  //       ) {
+  //         setOnlineGamers((prevOnlines) => {
+  //           const newOnlines = prevOnlines.filter(
+  //             (online) => online.userName !== adminNameRef.current
+  //           );
+  //           return newOnlines;
+  //         });
+  //       }
+  //     } catch (e) {
+  //       console.error("sendPresenceSign error:", e);
+  //     }
+  //   };
 
-    send(); // First sign
-    const interval = setInterval(send, 30000);
+  //   send(); // First sign
+  //   const interval = setInterval(send, 30000);
 
-    return () => {
-      clearInterval(interval);
-      isPresenceIntervalStartedRef.current = false;
-    };
-  }, [roomToken, user?.id, user?.name, user?.multiGuest, presenceChannel]);
+  //   return () => {
+  //     clearInterval(interval);
+  //     isPresenceIntervalStartedRef.current = false;
+  //   };
+  // }, [roomToken, user?.id, user?.name, user?.multiGuest, presenceChannel]);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    onlineGamersRef.current = onlineGamers;
-  }, [onlineGamers, isAdmin]);
-  useEffect(() => {
-    if (!isAdmin || !roomToken || isBoundCheckPresenceRef.current) return;
+  // useEffect(() => {
+  //   if (!isAdmin) return;
+  //   onlineGamersRef.current = onlineGamers;
+  // }, [onlineGamers, isAdmin]);
+  // useEffect(() => {
+  //   if (!isAdmin || !roomToken || isBoundCheckPresenceRef.current) return;
 
-    isBoundCheckPresenceRef.current = true;
-    bindCheckPresence({ setOnlineGamers });
-    presenceChannel.unbind("send-onlineGamers");
+  //   isBoundCheckPresenceRef.current = true;
+  //   bindCheckPresence({ setOnlineGamers });
+  //   presenceChannel.unbind("send-onlineGamers");
 
-    sendOnlineGamers({ roomToken, onlineGamers: [] });
+  //   sendOnlineGamers({ roomToken, onlineGamers: [] });
 
-    const sendOnlinesInterval = setInterval(async () => {
-      try {
-        const currentOnlines = onlineGamersRef.current;
-        await sendOnlineGamers({ roomToken, onlineGamers: currentOnlines });
-      } catch (e) {
-        console.error("sendOnlines error:", e);
-      }
-    }, 30000);
+  //   const sendOnlinesInterval = setInterval(async () => {
+  //     try {
+  //       const currentOnlines = onlineGamersRef.current;
+  //       await sendOnlineGamers({ roomToken, onlineGamers: currentOnlines });
+  //     } catch (e) {
+  //       console.error("sendOnlines error:", e);
+  //     }
+  //   }, 30000);
 
-    const checkChangeInterval = setInterval(async () => {
-      try {
-        const currentOnlines = onlineGamersRef.current;
-        const lastSent = lastSentOnlinesRef.current;
+  //   const checkChangeInterval = setInterval(async () => {
+  //     try {
+  //       const currentOnlines = onlineGamersRef.current;
+  //       const lastSent = lastSentOnlinesRef.current;
 
-        const changed =
-          JSON.stringify(currentOnlines) !== JSON.stringify(lastSent);
+  //       const changed =
+  //         JSON.stringify(currentOnlines) !== JSON.stringify(lastSent);
 
-        if (changed) {
-          lastSentOnlinesRef.current = currentOnlines;
-          await sendOnlineGamers({ roomToken, onlineGamers: currentOnlines });
-        }
-      } catch (e) {
-        console.error("checkChangeInterval error:", e);
-      }
-    }, 3000);
+  //       if (changed) {
+  //         lastSentOnlinesRef.current = currentOnlines;
+  //         await sendOnlineGamers({ roomToken, onlineGamers: currentOnlines });
+  //       }
+  //     } catch (e) {
+  //       console.error("checkChangeInterval error:", e);
+  //     }
+  //   }, 3000);
 
-    return () => {
-      clearInterval(sendOnlinesInterval);
-      clearInterval(checkChangeInterval);
-    };
-  }, [isAdmin, roomToken]);
+  //   return () => {
+  //     clearInterval(sendOnlinesInterval);
+  //     clearInterval(checkChangeInterval);
+  //   };
+  // }, [isAdmin, roomToken]);
 
-  useEffect(() => {
-    if (!gameData?.admin || !user?.name) return;
-    if (gameData.admin === user.name) {
-      setIsAdmin(true);
-    } else {
-      adminNameRef.current = gameData.admin;
-    }
-  }, [gameData.admin, user]);
+  // useEffect(() => {
+  //   if (!gameData?.admin || !user?.name) return;
+  //   if (gameData.admin === user.name) {
+  //     setIsAdmin(true);
+  //   } else {
+  //     adminNameRef.current = gameData.admin;
+  //   }
+  // }, [gameData.admin, user]);
   // ------------------------------
 
   // deleted_group: return home
@@ -1188,7 +1194,8 @@ export default function Room({
       if (gameData && gameData?.nextGame === "deleted group" && user) {
         !user.multiGuest && (await deleteInvs());
         pusher.unsubscribe(`room-${roomToken}`);
-        pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+        pusherPresence &&
+          pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
         router.push("/categories");
       }
     };
@@ -1556,11 +1563,18 @@ export default function Room({
                         !gameData.isSearching &&
                         options?.mode && (
                           <div className="w-full">
-                            <div className="text-xl absolute top-1.5 left-[50%] translate-x-[-50%] w-full text-center flex justify-center items-center gap-2">
+                            <div className="text-xl absolute left-[50%] translate-x-[-50%] w-full text-center flex justify-center items-center gap-4">
                               {options?.mode &&
                                 Object.entries(options).map(
                                   ([option, value]) => {
                                     if (option === "mode") return;
+                                    if (option === "countDownTime")
+                                      return (
+                                        <div key={option} className="flex h-6">
+                                          <FaRegHourglassHalf className="h-6 w-6" />
+                                          <div>{value / 60 / 1000}</div>
+                                        </div>
+                                      );
                                     return (
                                       <IconFromName
                                         key={option}

@@ -55,7 +55,8 @@ export default function ChooseOneMoreGame({
       });
 
       pusher.unsubscribe(`room-${roomToken}`);
-      pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+      pusherPresence &&
+        pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
 
       router.push(
         isFirst

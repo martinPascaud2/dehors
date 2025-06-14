@@ -4,7 +4,7 @@ import checkPlayers from "@/utils/checkPlayers";
 import { initGamersAndGuests } from "@/utils/initGamersAndGuests";
 import checkViceAdminAndArrivals from "@/utils/checkViceAdminAndArrivals";
 import { saveLastParams } from "@/utils/getLastParams";
-import { saveAndDispatchData } from "@/components/Room/actions";
+import { saveAndDispatchData, saveData } from "@/components/Room/actions";
 
 export async function launchGame({
   roomId,
@@ -73,31 +73,7 @@ export async function launchGame({
   return {};
 }
 
-export async function sendPosition({ roomId, roomToken, user, newPosition }) {
-  // const gameData = (
-  //   await prisma.room.findFirst({
-  //     where: { id: roomId },
-  //     select: { gameData: true },
-  //   })
-  // ).gameData;
-
-  // const { positions } = gameData;
-  // console.log("gameData", gameData);
-  // console.log("userName", userName);
-  // console.log("newPosition", newPosition);
-
-  // const gamerIndex = positions.findIndex((pos) => pos.name === userName);
-  // const newPositions = [...positions];
-  // newPositions[gamerIndex] = {
-  //   ...newPositions[gamerIndex],
-  //   latitude: newPosition[0],
-  //   longitude: newPosition[1],
-  // };
-
-  // const newData = { ...gameData, positions: newPositions };
-  // console.log("newData", newData);
-  // await saveAndDispatchData({ roomId, roomToken, newData });
-
+export async function sendPosition({ roomId, user, newPosition }) {
   if (user.multiGuest) {
     await prisma.multiguest.upsert({
       where: { id: user.dataId },
@@ -120,7 +96,6 @@ export async function sendPosition({ roomId, roomToken, user, newPosition }) {
       select: { gameData: true },
     })
   ).gameData;
-  console.log("roomData", roomData);
 
   const { gamers } = roomData;
 
@@ -155,9 +130,26 @@ export async function sendPosition({ roomId, roomToken, user, newPosition }) {
     })
   );
 
-  console.log("allPositions", allPositions);
   const newData = { ...roomData, positions: allPositions };
-  await saveAndDispatchData({ roomId, roomToken, newData });
+  await saveData({ roomId, newData });
+}
+
+export async function getPositions({ roomId }) {
+  let positions;
+  try {
+    const roomData = (
+      await prisma.room.findFirst({
+        where: { id: roomId },
+        select: { gameData: true },
+      })
+    ).gameData;
+    positions = roomData.positions;
+  } catch (error) {
+    console.error("getPositions error:", error);
+  } finally {
+    await prisma.$disconnect();
+  }
+  return positions;
 }
 
 export async function removeStandardGamers({

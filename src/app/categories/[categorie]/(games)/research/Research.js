@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { removeStandardGamers } from "./gameActions";
 
 import NextEndingPossibilities from "@/components/NextEndingPossibilities";
-import Disconnected from "@/components/disconnection/Disconnected";
+// import Disconnected from "@/components/disconnection/Disconnected";
 import Hunting from "./Hunting";
 
 export default function Research({
@@ -64,10 +64,11 @@ export default function Research({
         reset={() => console.log("to be done")}
         storedLocation={storedLocation}
         user={user}
-        showed={showNext}
+        // showed={showNext}
+        showed={true}
       />
 
-      <Disconnected
+      {/* <Disconnected
         roomId={roomId}
         roomToken={roomToken}
         onlineGamers={onlineGamers}
@@ -86,7 +87,7 @@ export default function Research({
         modeName={mode}
         gameData={gameData}
         user={user}
-      />
+      /> */}
     </>
   );
 }

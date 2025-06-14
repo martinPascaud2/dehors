@@ -713,14 +713,20 @@ export async function togglePrivacy({ roomId, roomToken, privacy }) {
 }
 
 export async function saveData({ roomId, newData }) {
-  await prisma.room.update({
-    where: {
-      id: roomId,
-    },
-    data: {
-      gameData: newData,
-    },
-  });
+  try {
+    await prisma.room.update({
+      where: {
+        id: roomId,
+      },
+      data: {
+        gameData: newData,
+      },
+    });
+  } catch (error) {
+    console.error("saveData error:", error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 export async function saveAndDispatchData({ roomId, roomToken, newData }) {

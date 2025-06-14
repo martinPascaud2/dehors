@@ -1,20 +1,20 @@
-import { IoPeople } from "react-icons/io5";
-import { BsThreeDots } from "react-icons/bs";
-import { GiPodium, GiPerspectiveDiceSixFacesRandom } from "react-icons/gi";
-import { AiOutlineAim } from "react-icons/ai";
-
-import Infinity from "@/components/icons/Infinity";
+import { FaBullseye } from "react-icons/fa6";
+import { FaHandPointUp } from "react-icons/fa";
+import {
+  GiCrossedSwords,
+  GiAutomaticSas,
+  GiAngelOutfit,
+  GiDeathSkull,
+} from "react-icons/gi";
 
 const iconsList = {
-  Podium: {
-    players: IoPeople,
-    others: BsThreeDots,
-    3: GiPodium,
-    infinite: (props) => <Infinity size={props?.size || 32} />,
-  },
-  Triaction: {
-    random: GiPerspectiveDiceSixFacesRandom,
-    peek: AiOutlineAim,
+  Hunted: {
+    FFA: FaBullseye,
+    VS: GiCrossedSwords,
+    automatic: GiAutomaticSas,
+    manual: FaHandPointUp,
+    resurrection: GiAngelOutfit,
+    death: GiDeathSkull,
   },
 };
 

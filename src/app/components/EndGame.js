@@ -44,7 +44,8 @@ export default function EndGame({
             onClick={() => {
               if (!path) return;
               pusher.unsubscribe(`room-${roomToken}`);
-              pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+              pusherPresence &&
+                pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
               router.push(`/categories/back/backToLobby/?path=${path}`);
             }}
             className="border border-blue-300 bg-blue-100"
@@ -59,7 +60,8 @@ export default function EndGame({
           <button
             onClick={() => {
               pusher.unsubscribe(`room-${roomToken}`);
-              pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+              pusherPresence &&
+                pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
               router.push(`${gameData.postgameRef}`);
             }}
             className="border border-blue-300 bg-blue-100"
@@ -73,7 +75,8 @@ export default function EndGame({
         <button
           onClick={async () => {
             pusher.unsubscribe(`room-${roomToken}`);
-            pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+            pusherPresence &&
+              pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
 
             await cancelBack({ userId: user.id });
 

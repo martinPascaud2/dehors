@@ -19,7 +19,8 @@ export default function DeleteGroup({ roomToken, roomId }) {
     <button
       onClick={async () => {
         pusher.unsubscribe(`room-${roomToken}`);
-        pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+        pusherPresence &&
+          pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
         await deleteGroup({ groupToken: roomToken });
         await deleteRoom({ roomId });
         window.location.href = "/categories";

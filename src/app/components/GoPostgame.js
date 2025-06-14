@@ -24,7 +24,8 @@ export default function GoPostgame({
         await cancelBack({ userId: user.id });
 
         pusher.unsubscribe(`room-${roomToken}`);
-        pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
+        pusherPresence &&
+          pusherPresence.unsubscribe(`custom-presence-${roomToken}`);
 
         if (!user.multiGuest) {
           window.location.href = postgameRef;
