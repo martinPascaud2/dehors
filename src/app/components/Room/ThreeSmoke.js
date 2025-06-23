@@ -111,6 +111,8 @@ import { useRef, useEffect, useState } from "react";
 
 import "./ThreeSmoke.css";
 
+import { serverLog } from "./actions";
+
 export default function ThreeSmoke() {
   const mountRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
@@ -151,7 +153,7 @@ export default function ThreeSmoke() {
     };
 
     if (!isWebGLAvailable()) {
-      console.error("WebGL non supporté sur ce navigateur !");
+      console.error("WebGL non supporté sur ce navigateur");
       return;
     }
 
@@ -230,6 +232,7 @@ export default function ThreeSmoke() {
         }
 
         animate();
+        serverLog({ key: "debug", value: "animation" });
       },
       undefined,
       (err) => console.error("Erreur chargement texture :", err)
