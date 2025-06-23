@@ -501,15 +501,29 @@ export default function ThreeSmoke() {
   //   return () => window.removeEventListener("resize", handleResize);
   // }, []);
 
-  const loadTexture = (url) => {
+  // const loadTexture = (url) => {
+  //   return new Promise((resolve, reject) => {
+  //     const loader = new Three.TextureLoader();
+  //     loader.load(
+  //       url,
+  //       (texture) => resolve(texture),
+  //       undefined,
+  //       (err) => reject(err)
+  //     );
+  //   });
+  // };
+
+  const loadTextureFromImage = (url) => {
     return new Promise((resolve, reject) => {
-      const loader = new Three.TextureLoader();
-      loader.load(
-        url,
-        (texture) => resolve(texture),
-        undefined,
-        (err) => reject(err)
-      );
+      const img = new Image();
+      img.onload = () => {
+        const texture = new Three.Texture(img);
+        texture.needsUpdate = true;
+        resolve(texture);
+      };
+      img.onerror = (err) =>
+        reject(new Error("Erreur de chargement de l'image"));
+      img.src = url;
     });
   };
 
@@ -574,7 +588,8 @@ export default function ThreeSmoke() {
       };
 
       try {
-        const texture = await loadTexture("/smoke.png");
+        // const texture = await loadTexture("/smoke.png");
+        const texture = await loadTextureFromImage("/smoke.png");
         const material = new Three.MeshLambertMaterial({
           color: 0xffffff,
           map: texture,
