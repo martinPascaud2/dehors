@@ -111,6 +111,7 @@ import { useRef, useEffect, useState } from "react";
 
 import "./ThreeSmoke.css";
 // import smokeImage from "/smoke.png";
+import { serverLog } from "./actions";
 
 export default function ThreeSmoke() {
   const mountRef = useRef(null);
@@ -237,6 +238,7 @@ export default function ThreeSmoke() {
     // };
 
     const texture = new Three.TextureLoader().load("/smoke.png");
+    serverLog({ key: "texture", value: JSON.stringify(texture) });
 
     const material = new Three.MeshLambertMaterial({
       color: 0xffffff,

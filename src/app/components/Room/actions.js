@@ -827,3 +827,7 @@ export async function getAllRoom({ roomId }) {
   });
   console.log("room", room);
 }
+
+export async function serverLog({ key, value }) {
+  console.log(key, value);
+}
