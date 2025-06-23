@@ -615,8 +615,7 @@ export default function ThreeSmoke() {
       }
     };
 
-    setTimeout(() => loadScene(), 1000);
-    // loadScene();
+    loadScene();
 
     const handleResize = () => {
       if (!rendererRef.current || !cameraRef.current) return;
