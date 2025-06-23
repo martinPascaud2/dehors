@@ -8,7 +8,9 @@ export async function middleware(request) {
     request.nextUrl.pathname.startsWith("/sw.js") ||
     request.nextUrl.pathname.startsWith("/workbox") ||
     request.nextUrl.pathname.startsWith("/manifest.json") ||
-    request.nextUrl.pathname.startsWith("/icon")
+    request.nextUrl.pathname.startsWith("/icon") ||
+    request.nextUrl.pathname.startsWith("/categoriesIcons/") ||
+    request.nextUrl.pathname.startsWith("/smoke")
   )
     return NextResponse.next();
 
