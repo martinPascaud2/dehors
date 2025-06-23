@@ -130,120 +130,235 @@ export default function ThreeSmoke() {
   //     cameraRef.current.updateProjectionMatrix();
   //   };
 
-  // setTimeout(() => setLoaded(true), 100);
-  // setTimeout(() => setLoaded(true), 500);
-  // window.addEventListener("resize", handleResize);
+  //   setTimeout(() => setLoaded(true), 100);
+  //   setTimeout(() => setLoaded(true), 500);
+  //   window.addEventListener("resize", handleResize);
 
-  // return () => window.removeEventListener("resize", handleResize);
+  //   return () => window.removeEventListener("resize", handleResize);
   // }, []);
-  // }, [mountRef]);
+
+  // useEffect(() => {
+  //   if (!loaded || !mountRef.current) return;
+
+  //   const isWebGLAvailable = () => {
+  //     try {
+  //       const canvas = document.createElement("canvas");
+  //       return !!(
+  //         window.WebGLRenderingContext &&
+  //         (canvas.getContext("webgl") ||
+  //           canvas.getContext("experimental-webgl"))
+  //       );
+  //     } catch {
+  //       return false;
+  //     }
+  //   };
+
+  //   if (!isWebGLAvailable()) {
+  //     console.error("WebGL non supporté sur ce navigateur");
+  //     return;
+  //   }
+
+  //   const scene = new Three.Scene();
+  //   const camera = new Three.PerspectiveCamera(
+  //     60,
+  //     window.innerWidth / window.innerHeight,
+  //     1,
+  //     10000
+  //   );
+  //   camera.position.z = 1200;
+
+  //   const renderer = new Three.WebGLRenderer({
+  //     alpha: true,
+  //     antialias: true,
+  //     preserveDrawingBuffer: false,
+  //   });
+  //   renderer.setSize(window.innerWidth, window.innerHeight);
+
+  //   mountRef.current.innerHTML = ""; // clean previous canvas if needed
+  //   mountRef.current.appendChild(renderer.domElement);
+
+  //   const light = new Three.DirectionalLight(0xffffff, 1);
+  //   light.position.set(-1, 0, 1);
+  //   scene.add(light);
+  //   scene.add(camera);
+
+  //   rendererRef.current = renderer;
+
+  //   cameraRef.current = camera;
+  //   cameraRef.current.aspect = window.innerWidth / window.innerHeight;
+  //   cameraRef.current.updateProjectionMatrix();
+
+  //   sceneRef.current = scene;
+
+  //   const animate = () => {
+  //     requestAnimationFrame(animate);
+  //     const delta = clockRef.current.getDelta();
+  //     smokeParticles.current.forEach((p) => {
+  //       p.rotation.z += delta * 0.05;
+  //       p.position.x += (Math.random() - 0.5) * 0.2;
+  //       p.position.y += (Math.random() - 0.5) * 0.2;
+  //     });
+  //     renderer.render(scene, camera);
+  //   };
+
+  //   const loader = new Three.TextureLoader();
+  //   loader.load(
+  //     "/smoke.png",
+  //     (texture) => {
+  //       const material = new Three.MeshLambertMaterial({
+  //         color: 0xffffff,
+  //         map: texture,
+  //         transparent: true,
+  //         opacity: 0.1,
+  //         depthWrite: false,
+  //         blending: Three.AdditiveBlending,
+  //       });
+
+  //       const geometry = new Three.PlaneGeometry(2000, 2000);
+  //       const gridSize = 4;
+  //       const spacing = 600;
+
+  //       for (let x = 0; x < gridSize; x++) {
+  //         for (let y = 0; y < gridSize; y++) {
+  //           for (let z = 0; z < gridSize; z++) {
+  //             const particle = new Three.Mesh(geometry, material);
+  //             particle.position.set(
+  //               (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
+  //               (y - gridSize / 2) * spacing +
+  //                 (Math.random() - 0.5) * 100 +
+  //                 250,
+  //               (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
+  //             );
+  //             particle.rotation.z = Math.random() * 360;
+  //             scene.add(particle);
+  //             smokeParticles.current.push(particle);
+  //           }
+  //         }
+  //       }
+
+  //       animate();
+  //       serverLog({ key: "debug", value: "animation" });
+  //     },
+  //     undefined,
+  //     (err) => console.error("Erreur chargement texture :", err)
+  //   );
+  // }, [loaded]);
 
   useEffect(() => {
-    // if (!loaded || !mountRef.current) return;
+    const handleResize = () => {
+      if (!rendererRef.current || !cameraRef.current) return;
+      rendererRef.current.setSize(window.innerWidth, window.innerHeight);
+      cameraRef.current.aspect = window.innerWidth / window.innerHeight;
+      cameraRef.current.updateProjectionMatrix();
+    };
 
-    const isWebGLAvailable = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        return !!(
-          window.WebGLRenderingContext &&
-          (canvas.getContext("webgl") ||
-            canvas.getContext("experimental-webgl"))
-        );
-      } catch {
-        return false;
+    requestAnimationFrame(() => {
+      if (!mountRef.current) return;
+
+      const isWebGLAvailable = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          return !!(
+            window.WebGLRenderingContext &&
+            (canvas.getContext("webgl") ||
+              canvas.getContext("experimental-webgl"))
+          );
+        } catch {
+          return false;
+        }
+      };
+
+      if (!isWebGLAvailable()) {
+        console.error("WebGL non supporté sur ce navigateur");
+        return;
       }
-    };
 
-    if (!isWebGLAvailable()) {
-      console.error("WebGL non supporté sur ce navigateur");
-      return;
-    }
+      const scene = new Three.Scene();
+      const camera = new Three.PerspectiveCamera(
+        60,
+        window.innerWidth / window.innerHeight,
+        1,
+        10000
+      );
+      camera.position.z = 1200;
 
-    const scene = new Three.Scene();
-    const camera = new Three.PerspectiveCamera(
-      60,
-      window.innerWidth / window.innerHeight,
-      1,
-      10000
-    );
-    camera.position.z = 1200;
-
-    const renderer = new Three.WebGLRenderer({
-      alpha: true,
-      antialias: true,
-      preserveDrawingBuffer: false,
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    mountRef.current.innerHTML = ""; // clean previous canvas if needed
-    mountRef.current.appendChild(renderer.domElement);
-
-    const light = new Three.DirectionalLight(0xffffff, 1);
-    light.position.set(-1, 0, 1);
-    scene.add(light);
-    scene.add(camera);
-
-    rendererRef.current = renderer;
-
-    cameraRef.current = camera;
-    cameraRef.current.aspect = window.innerWidth / window.innerHeight;
-    cameraRef.current.updateProjectionMatrix();
-
-    sceneRef.current = scene;
-
-    const animate = () => {
-      requestAnimationFrame(animate);
-      const delta = clockRef.current.getDelta();
-      smokeParticles.current.forEach((p) => {
-        p.rotation.z += delta * 0.05;
-        p.position.x += (Math.random() - 0.5) * 0.2;
-        p.position.y += (Math.random() - 0.5) * 0.2;
+      const renderer = new Three.WebGLRenderer({
+        alpha: true,
+        antialias: true,
       });
-      renderer.render(scene, camera);
-    };
+      renderer.setSize(window.innerWidth, window.innerHeight);
 
-    const loader = new Three.TextureLoader();
-    loader.load(
-      "/smoke.png",
-      (texture) => {
-        const material = new Three.MeshLambertMaterial({
-          color: 0xffffff,
-          map: texture,
-          transparent: true,
-          opacity: 0.1,
-          depthWrite: false,
-          blending: Three.AdditiveBlending,
+      mountRef.current.innerHTML = "";
+      mountRef.current.appendChild(renderer.domElement);
+
+      const light = new Three.DirectionalLight(0xffffff, 1);
+      light.position.set(-1, 0, 1);
+      scene.add(light);
+      scene.add(camera);
+
+      rendererRef.current = renderer;
+      cameraRef.current = camera;
+      sceneRef.current = scene;
+
+      const animate = () => {
+        requestAnimationFrame(animate);
+        const delta = clockRef.current.getDelta();
+        smokeParticles.current.forEach((p) => {
+          p.rotation.z += delta * 0.05;
+          p.position.x += (Math.random() - 0.5) * 0.2;
+          p.position.y += (Math.random() - 0.5) * 0.2;
         });
+        renderer.render(scene, camera);
+      };
 
-        const geometry = new Three.PlaneGeometry(2000, 2000);
-        const gridSize = 4;
-        const spacing = 600;
+      const loader = new Three.TextureLoader();
+      loader.load(
+        "/smoke.png",
+        (texture) => {
+          const material = new Three.MeshLambertMaterial({
+            color: 0xffffff,
+            map: texture,
+            transparent: true,
+            opacity: 0.1,
+            depthWrite: false,
+            blending: Three.AdditiveBlending,
+          });
 
-        for (let x = 0; x < gridSize; x++) {
-          for (let y = 0; y < gridSize; y++) {
-            for (let z = 0; z < gridSize; z++) {
-              const particle = new Three.Mesh(geometry, material);
-              particle.position.set(
-                (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
-                (y - gridSize / 2) * spacing +
-                  (Math.random() - 0.5) * 100 +
-                  250,
-                (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
-              );
-              particle.rotation.z = Math.random() * 360;
-              scene.add(particle);
-              smokeParticles.current.push(particle);
+          const geometry = new Three.PlaneGeometry(2000, 2000);
+          const gridSize = 4;
+          const spacing = 600;
+
+          for (let x = 0; x < gridSize; x++) {
+            for (let y = 0; y < gridSize; y++) {
+              for (let z = 0; z < gridSize; z++) {
+                const particle = new Three.Mesh(geometry, material);
+                particle.position.set(
+                  (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
+                  (y - gridSize / 2) * spacing +
+                    (Math.random() - 0.5) * 100 +
+                    250,
+                  (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
+                );
+                particle.rotation.z = Math.random() * 360;
+                scene.add(particle);
+                smokeParticles.current.push(particle);
+              }
             }
           }
-        }
 
-        animate();
-        serverLog({ key: "debug", value: "animation" });
-      },
-      undefined,
-      (err) => console.error("Erreur chargement texture :", err)
-    );
-    // }, [loaded, mountRef]);
+          animate();
+          serverLog({ key: "debug", value: "animation" });
+        },
+        undefined,
+        (err) => {
+          console.error("Erreur chargement texture :", err);
+          serverLog({ key: "error", value: "Erreur chargement texture" });
+        }
+      );
+    });
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return (
@@ -253,118 +368,3 @@ export default function ThreeSmoke() {
     />
   );
 }
-
-// useEffect(() => {
-//   if (!mountRef.current) return;
-
-//   const isWebGLAvailable = () => {
-//     try {
-//       const canvas = document.createElement("canvas");
-//       return !!(
-//         window.WebGLRenderingContext &&
-//         (canvas.getContext("webgl") ||
-//           canvas.getContext("experimental-webgl"))
-//       );
-//     } catch {
-//       return false;
-//     }
-//   };
-
-//   if (!isWebGLAvailable()) {
-//     console.error("WebGL non supporté sur ce navigateur");
-//     return;
-//   }
-
-//   const scene = new Three.Scene();
-//   const camera = new Three.PerspectiveCamera(
-//     60,
-//     window.innerWidth / window.innerHeight,
-//     1,
-//     10000
-//   );
-//   camera.position.z = 1200;
-
-//   const renderer = new Three.WebGLRenderer({
-//     alpha: true,
-//     antialias: true,
-//   });
-//   renderer.setSize(window.innerWidth, window.innerHeight);
-
-//   mountRef.current.innerHTML = "";
-//   mountRef.current.appendChild(renderer.domElement);
-
-//   const light = new Three.DirectionalLight(0xffffff, 1);
-//   light.position.set(-1, 0, 1);
-//   scene.add(light);
-//   scene.add(camera);
-
-//   rendererRef.current = renderer;
-//   cameraRef.current = camera;
-//   sceneRef.current = scene;
-
-//   const animate = () => {
-//     requestAnimationFrame(animate);
-//     const delta = clockRef.current.getDelta();
-//     smokeParticles.current.forEach((p) => {
-//       p.rotation.z += delta * 0.05;
-//       p.position.x += (Math.random() - 0.5) * 0.2;
-//       p.position.y += (Math.random() - 0.5) * 0.2;
-//     });
-//     renderer.render(scene, camera);
-//   };
-
-//   const loader = new Three.TextureLoader();
-//   loader.load(
-//     "/smoke.png",
-//     (texture) => {
-//       const material = new Three.MeshLambertMaterial({
-//         color: 0xffffff,
-//         map: texture,
-//         transparent: true,
-//         opacity: 0.1,
-//         depthWrite: false,
-//         blending: Three.AdditiveBlending,
-//       });
-
-//       const geometry = new Three.PlaneGeometry(2000, 2000);
-//       const gridSize = 4;
-//       const spacing = 600;
-
-//       for (let x = 0; x < gridSize; x++) {
-//         for (let y = 0; y < gridSize; y++) {
-//           for (let z = 0; z < gridSize; z++) {
-//             const particle = new Three.Mesh(geometry, material);
-//             particle.position.set(
-//               (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
-//               (y - gridSize / 2) * spacing +
-//                 (Math.random() - 0.5) * 100 +
-//                 250,
-//               (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
-//             );
-//             particle.rotation.z = Math.random() * 360;
-//             scene.add(particle);
-//             smokeParticles.current.push(particle);
-//           }
-//         }
-//       }
-
-//       animate();
-//       serverLog({ key: "debug", value: "animation" });
-//     },
-//     undefined,
-//     (err) => {
-//       console.error("Erreur chargement texture :", err);
-//       serverLog({ key: "error", value: "Erreur chargement texture" });
-//     }
-//   );
-
-//   const handleResize = () => {
-//     if (!renderer || !camera) return;
-//     renderer.setSize(window.innerWidth, window.innerHeight);
-//     camera.aspect = window.innerWidth / window.innerHeight;
-//     camera.updateProjectionMatrix();
-//   };
-
-//   window.addEventListener("resize", handleResize);
-//   return () => window.removeEventListener("resize", handleResize);
-// }, []);
