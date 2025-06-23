@@ -645,7 +645,8 @@ export default function ThreeSmoke() {
   return (
     <div
       ref={mountRef}
-      className="canvas-container animate-[fadeIn_1.5s_ease-in-out]"
+      // className="canvas-container animate-[fadeIn_1.5s_ease-in-out]"
+      className="canvas-container"
     />
   );
 }
