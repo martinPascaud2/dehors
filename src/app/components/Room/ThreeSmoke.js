@@ -110,8 +110,6 @@ import * as Three from "three";
 import { useRef, useEffect, useState } from "react";
 
 import "./ThreeSmoke.css";
-// import smokeImage from "/smoke.png";
-import { serverLog } from "./actions";
 
 export default function ThreeSmoke() {
   const mountRef = useRef(null);
@@ -185,90 +183,6 @@ export default function ThreeSmoke() {
     cameraRef.current = camera;
     sceneRef.current = scene;
 
-    // const loader = new Three.TextureLoader();
-    // loader.load(
-    //   "/smoke.png",
-    //   (texture) => {
-    //     const material = new Three.MeshLambertMaterial({
-    //       color: 0xffffff,
-    //       map: texture,
-    //       transparent: true,
-    //       opacity: 0.1,
-    //       depthWrite: false,
-    //       blending: Three.AdditiveBlending,
-    //     });
-
-    //     const geometry = new Three.PlaneGeometry(2000, 2000);
-    //     const gridSize = 4;
-    //     const spacing = 600;
-
-    //     for (let x = 0; x < gridSize; x++) {
-    //       for (let y = 0; y < gridSize; y++) {
-    //         for (let z = 0; z < gridSize; z++) {
-    //           const particle = new Three.Mesh(geometry, material);
-    //           particle.position.set(
-    //             (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
-    //             (y - gridSize / 2) * spacing +
-    //               (Math.random() - 0.5) * 100 +
-    //               250,
-    //             (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
-    //           );
-    //           particle.rotation.z = Math.random() * 360;
-    //           scene.add(particle);
-    //           smokeParticles.current.push(particle);
-    //         }
-    //       }
-    //     }
-
-    //     animate();
-    //   },
-    //   undefined,
-    //   (err) => console.error("Erreur chargement texture :", err)
-    // );
-
-    // const animate = () => {
-    //   requestAnimationFrame(animate);
-    //   const delta = clockRef.current.getDelta();
-    //   smokeParticles.current.forEach((p) => {
-    //     p.rotation.z += delta * 0.05;
-    //     p.position.x += (Math.random() - 0.5) * 0.2;
-    //     p.position.y += (Math.random() - 0.5) * 0.2;
-    //   });
-    //   renderer.render(scene, camera);
-    // };
-
-    const texture = new Three.TextureLoader().load("/smoke.png");
-    serverLog({ key: "texture", value: JSON.stringify(texture) });
-
-    const material = new Three.MeshLambertMaterial({
-      color: 0xffffff,
-      map: texture,
-      transparent: true,
-      opacity: 0.1,
-      depthWrite: false,
-      blending: Three.AdditiveBlending,
-    });
-
-    const geometry = new Three.PlaneGeometry(2000, 2000);
-    const gridSize = 4;
-    const spacing = 600;
-
-    for (let x = 0; x < gridSize; x++) {
-      for (let y = 0; y < gridSize; y++) {
-        for (let z = 0; z < gridSize; z++) {
-          const particle = new Three.Mesh(geometry, material);
-          particle.position.set(
-            (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
-            (y - gridSize / 2) * spacing + (Math.random() - 0.5) * 100 + 250,
-            (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
-          );
-          particle.rotation.z = Math.random() * 360;
-          scene.add(particle);
-          smokeParticles.current.push(particle);
-        }
-      }
-    }
-
     const animate = () => {
       requestAnimationFrame(animate);
       const delta = clockRef.current.getDelta();
@@ -280,17 +194,46 @@ export default function ThreeSmoke() {
       renderer.render(scene, camera);
     };
 
-    animate();
+    const loader = new Three.TextureLoader();
+    loader.load(
+      "/smoke.png",
+      (texture) => {
+        const material = new Three.MeshLambertMaterial({
+          color: 0xffffff,
+          map: texture,
+          transparent: true,
+          opacity: 0.1,
+          depthWrite: false,
+          blending: Three.AdditiveBlending,
+        });
 
-    return () => {
-      renderer.dispose();
-      renderer.forceContextLoss?.();
-      smokeParticles.current = [];
-      if (renderer.domElement && renderer.domElement.parentNode) {
-        renderer.domElement.parentNode.removeChild(renderer.domElement);
-      }
-    };
-    // }, [loaded]);
+        const geometry = new Three.PlaneGeometry(2000, 2000);
+        const gridSize = 4;
+        const spacing = 600;
+
+        for (let x = 0; x < gridSize; x++) {
+          for (let y = 0; y < gridSize; y++) {
+            for (let z = 0; z < gridSize; z++) {
+              const particle = new Three.Mesh(geometry, material);
+              particle.position.set(
+                (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
+                (y - gridSize / 2) * spacing +
+                  (Math.random() - 0.5) * 100 +
+                  250,
+                (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
+              );
+              particle.rotation.z = Math.random() * 360;
+              scene.add(particle);
+              smokeParticles.current.push(particle);
+            }
+          }
+        }
+
+        animate();
+      },
+      undefined,
+      (err) => console.error("Erreur chargement texture :", err)
+    );
   }, [loaded, mountRef]);
 
   return (
