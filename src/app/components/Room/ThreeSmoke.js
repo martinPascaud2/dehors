@@ -492,7 +492,7 @@ export default function ThreeSmoke() {
         undefined,
         (err) => {
           console.error("Erreur chargement texture :", err);
-          serverLog({ key: "error", value: "Erreur chargement texture" });
+          serverLog({ key: "error", value: err });
         }
       );
     });
