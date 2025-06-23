@@ -829,5 +829,5 @@ export async function getAllRoom({ roomId }) {
 }
 
 export async function serverLog({ key, value }) {
-  console.log(key, value);
+  console.warn(key, value);
 }
