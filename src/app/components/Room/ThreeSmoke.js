@@ -575,8 +575,7 @@ export default function ThreeSmoke() {
       };
 
       try {
-        // const texture = await loadTexture("/smoke.png");
-        const texture = await loadTexture("/smoke.png");
+        const texture = await loadTexture("/smoke.jpg");
         const material = new Three.MeshLambertMaterial({
           color: 0xffffff,
           map: texture,
