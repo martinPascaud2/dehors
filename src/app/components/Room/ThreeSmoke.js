@@ -577,7 +577,9 @@ export default function ThreeSmoke() {
       try {
         // const texture = await loadTexture("/smoke.png");
         const texture = await loadTexture("/smoke.png");
-        const material = new Three.MeshLambertMaterial({
+
+        // const material = new Three.MeshLambertMaterial({
+        const material = new Three.MeshBasicMaterial({
           color: 0xffffff,
           map: texture,
           transparent: true,
