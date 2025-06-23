@@ -214,6 +214,7 @@ export default async function CategoriesPage() {
       if (arrivalsOrder.length <= 1 || (!started && creationAgeInMn > 30))
         return null;
 
+      if (!gamesRefs[game]) return null;
       const { categorie } = gamesRefs[game];
       const path = `/categories/${categorie}/${game}?token=${roomToken}`;
       return { admin, game, path, mode: options?.mode };

@@ -4,7 +4,10 @@ export default function ToggleCheckbox({ checked, onChange, colors, size }) {
 
   return (
     <button
-      onClick={async () => await onChange(checked)}
+      onClick={async (e) => {
+        e.stopPropagation();
+        await onChange(checked);
+      }}
       className={`rounded-[4rem] relative transition-all border`}
       style={{
         backgroundColor: checked ? colors.bg.yes : colors.bg.no,

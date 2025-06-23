@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { MdRocketLaunch } from "react-icons/md";
-import { IoArrowForward } from "react-icons/io5";
+import { IoArrowForward, IoArrowBack } from "react-icons/io5";
 import { FaCheck } from "react-icons/fa6";
 import { RiRefreshLine } from "react-icons/ri";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 import { useUserContext } from "./Room/Room";
 
@@ -14,6 +15,8 @@ const iconsList = {
   next: IoArrowForward,
   validate: FaCheck,
   again: RiRefreshLine,
+  back: IoArrowBack,
+  cancel: XMarkIcon,
 };
 
 export default function NextStep({
@@ -56,6 +59,7 @@ export default function NextStep({
 
   return (
     <div
+      onClick={(e) => e.stopPropagation()}
       className={`absolute z-30 left-1/2 translate-x-[-50%] translate-y-[-30%] mb-4`}
       style={{
         bottom: `${userParams?.bottomBarSize / 4 || 2}rem`,

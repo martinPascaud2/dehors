@@ -5,6 +5,8 @@ import { initGamersAndGuests } from "@/utils/initGamersAndGuests";
 import checkViceAdminAndArrivals from "@/utils/checkViceAdminAndArrivals";
 import { saveLastParams } from "@/utils/getLastParams";
 import { saveAndDispatchData, saveData } from "@/components/Room/actions";
+import free from "@/utils/queue/free";
+import wait from "@/utils/queue/wait";
 
 export async function launchGame({
   roomId,
@@ -62,6 +64,7 @@ export async function launchGame({
       gamers: gamersAndGuests,
       options,
       positions,
+      phase: "preparing",
     };
   }
 
@@ -73,7 +76,147 @@ export async function launchGame({
   return {};
 }
 
+export async function proposeTeams({ ffaTeams, vsTeams, roomId, roomToken }) {
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  const { gamers, admin, options } = roomData;
+
+  const waitingForGamers = gamers
+    .reduce((list, gamer) => {
+      if (gamer.name === admin) return list;
+      list.push(gamer.name);
+      return list;
+    }, [])
+    .sort();
+
+  const distribution = options.distribution;
+  let proposed;
+
+  if (distribution === "FFA") {
+    const { hunters, hunteds, undefineds } = ffaTeams;
+
+    const proposedHunters = [...hunters];
+    const proposedHunteds = [...hunteds, ...undefineds];
+
+    proposed = { hunters: proposedHunters, hunteds: proposedHunteds };
+  } else if (distribution === "VS") {
+    const { red, blue } = vsTeams;
+
+    const proposedRedHunters = [...red.hunters];
+    const proposedRedHunteds = [...red.hunteds, ...red.undefineds];
+    const proposedBlueHunters = [...blue.hunters];
+    const proposedBlueHunteds = [...blue.hunteds, ...blue.undefineds];
+
+    proposed = {
+      red: {
+        hunters: proposedRedHunters,
+        hunteds: proposedRedHunteds,
+      },
+      blue: {
+        hunters: proposedBlueHunters,
+        hunteds: proposedBlueHunteds,
+      },
+    };
+  }
+
+  const newData = {
+    ...roomData,
+    proposed,
+    phase: "proposing",
+    waitingForGamers,
+    acceptedGamers: [admin],
+    decliners: [],
+  };
+  await saveAndDispatchData({ roomId, roomToken, newData });
+}
+
+export async function accept({ userName, roomId, roomToken }) {
+  await wait({ roomId });
+
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  if (roomData.acceptedGamers.some((accepter) => accepter === userName)) return;
+
+  const newAcceptedGamers = roomData.acceptedGamers || [];
+  newAcceptedGamers.push(userName);
+
+  const newWaitingForGamers = roomData.waitingForGamers.filter(
+    (gamer) => gamer !== userName
+  );
+
+  const newDecliners = roomData.decliners.filter((gamer) => gamer !== userName);
+
+  const newData = {
+    ...roomData,
+    decliners: newDecliners,
+    waitingForGamers: newWaitingForGamers,
+    acceptedGamers: newAcceptedGamers,
+  };
+
+  await saveAndDispatchData({ roomId, roomToken, newData });
+  await free({ roomId });
+}
+
+export async function decline({ userName, roomId, roomToken }) {
+  await wait({ roomId });
+
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  if (roomData.decliners.some((decliner) => decliner === userName)) return;
+
+  const newDecliners = roomData.decliners || [];
+  newDecliners.push(userName);
+
+  const newWaitingForGamers = roomData.waitingForGamers.filter(
+    (gamer) => gamer !== userName
+  );
+
+  const newAcceptedGamers = roomData.acceptedGamers.filter(
+    (gamer) => gamer !== userName
+  );
+
+  const newData = {
+    ...roomData,
+    decliners: newDecliners,
+    waitingForGamers: newWaitingForGamers,
+    acceptedGamers: newAcceptedGamers,
+  };
+
+  await saveAndDispatchData({ roomId, roomToken, newData });
+  await free({ roomId });
+}
+
+export async function backToPreparing({ roomId, roomToken }) {
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  const newData = { ...roomData, phase: "preparing", keepTeams: true };
+
+  await saveAndDispatchData({ roomId, roomToken, newData });
+}
+
 export async function sendPosition({ roomId, user, newPosition }) {
+  await wait({ roomId });
+
   if (user.multiGuest) {
     await prisma.multiguest.upsert({
       where: { id: user.dataId },
@@ -98,7 +241,6 @@ export async function sendPosition({ roomId, user, newPosition }) {
   ).gameData;
 
   const { gamers } = roomData;
-
   const allPositions = [];
   await Promise.all(
     gamers.map(async (gamer) => {
@@ -132,6 +274,7 @@ export async function sendPosition({ roomId, user, newPosition }) {
 
   const newData = { ...roomData, positions: allPositions };
   await saveData({ roomId, newData });
+  await free({ roomId });
 }
 
 export async function getPositions({ roomId }) {
@@ -150,6 +293,42 @@ export async function getPositions({ roomId }) {
     await prisma.$disconnect();
   }
   return positions;
+}
+
+export async function goNewHunting({
+  gameData,
+  roomId,
+  roomToken,
+  newOptions = null,
+  areTeamKept = true,
+}) {
+  const newPhase = "preparing";
+  const newAcceptedGamers = [];
+  const newDecliners = [];
+  const { gamers } = gameData;
+  const newPositions = [];
+
+  gamers.forEach((gamer) => {
+    newPositions.push({ name: gamer.name, latitude: null, longitude: null });
+  });
+  const newProposed = areTeamKept ? gameData.proposed : undefined;
+  const newWaitingForGamers = [];
+  const newKeepTeams = !!gameData.proposed && areTeamKept; // check if keepTeams is needed
+  const newEnded = false;
+
+  const newData = {
+    ...gameData,
+    phase: newPhase,
+    acceptedGamers: newAcceptedGamers,
+    decliners: newDecliners,
+    positions: newPositions,
+    proposed: newProposed,
+    waitingForGamers: newWaitingForGamers,
+    keepTeams: newKeepTeams,
+    options: newOptions ? newOptions : gameData.options,
+    ended: newEnded,
+  };
+  await saveAndDispatchData({ roomId, roomToken, newData });
 }
 
 export async function removeStandardGamers({
