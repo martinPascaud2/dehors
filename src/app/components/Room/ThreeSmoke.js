@@ -501,29 +501,15 @@ export default function ThreeSmoke() {
   //   return () => window.removeEventListener("resize", handleResize);
   // }, []);
 
-  // const loadTexture = (url) => {
-  //   return new Promise((resolve, reject) => {
-  //     const loader = new Three.TextureLoader();
-  //     loader.load(
-  //       url,
-  //       (texture) => resolve(texture),
-  //       undefined,
-  //       (err) => reject(err)
-  //     );
-  //   });
-  // };
-
-  const loadTextureFromImage = (url) => {
+  const loadTexture = (url) => {
     return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const texture = new Three.Texture(img);
-        texture.needsUpdate = true;
-        resolve(texture);
-      };
-      img.onerror = (err) =>
-        reject(new Error("Erreur de chargement de l'image"));
-      img.src = url;
+      const loader = new Three.TextureLoader();
+      loader.load(
+        url,
+        (texture) => resolve(texture),
+        undefined,
+        (err) => reject(err)
+      );
     });
   };
 
@@ -589,7 +575,7 @@ export default function ThreeSmoke() {
 
       try {
         // const texture = await loadTexture("/smoke.png");
-        const texture = await loadTextureFromImage("/smoke.png");
+        const texture = await loadTexture("/smoke.png");
         const material = new Three.MeshLambertMaterial({
           color: 0xffffff,
           map: texture,
@@ -629,7 +615,8 @@ export default function ThreeSmoke() {
       }
     };
 
-    loadScene();
+    setTimeout(() => loadScene(), 1000);
+    // loadScene();
 
     const handleResize = () => {
       if (!rendererRef.current || !cameraRef.current) return;
@@ -645,8 +632,7 @@ export default function ThreeSmoke() {
   return (
     <div
       ref={mountRef}
-      // className="canvas-container animate-[fadeIn_1.5s_ease-in-out]"
-      className="canvas-container"
+      className="canvas-container animate-[fadeIn_1.5s_ease-in-out]"
     />
   );
 }
