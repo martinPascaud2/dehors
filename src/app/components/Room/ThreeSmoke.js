@@ -242,7 +242,8 @@ export default function ThreeSmoke() {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     };
-  }, [loaded]);
+    // }, [loaded]);
+  }, [loaded, mountRef]);
 
   return (
     <div
