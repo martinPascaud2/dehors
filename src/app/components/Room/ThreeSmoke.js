@@ -130,7 +130,8 @@ export default function ThreeSmoke() {
       cameraRef.current.updateProjectionMatrix();
     };
 
-    setTimeout(() => setLoaded(true), 100);
+    // setTimeout(() => setLoaded(true), 100);
+    setTimeout(() => setLoaded(true), 500);
     window.addEventListener("resize", handleResize);
 
     return () => window.removeEventListener("resize", handleResize);
