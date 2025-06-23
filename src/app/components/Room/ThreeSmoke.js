@@ -383,15 +383,138 @@ export default function ThreeSmoke() {
   //   );
   // }, [loaded]);
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (!rendererRef.current || !cameraRef.current) return;
-      rendererRef.current.setSize(window.innerWidth, window.innerHeight);
-      cameraRef.current.aspect = window.innerWidth / window.innerHeight;
-      cameraRef.current.updateProjectionMatrix();
-    };
+  // useEffect(() => {
+  //   const handleResize = () => {
+  //     if (!rendererRef.current || !cameraRef.current) return;
+  //     rendererRef.current.setSize(window.innerWidth, window.innerHeight);
+  //     cameraRef.current.aspect = window.innerWidth / window.innerHeight;
+  //     cameraRef.current.updateProjectionMatrix();
+  //   };
 
-    requestAnimationFrame(() => {
+  //   requestAnimationFrame(() => {
+  //     if (!mountRef.current) return;
+
+  //     const isWebGLAvailable = () => {
+  //       try {
+  //         const canvas = document.createElement("canvas");
+  //         return !!(
+  //           window.WebGLRenderingContext &&
+  //           (canvas.getContext("webgl") ||
+  //             canvas.getContext("experimental-webgl"))
+  //         );
+  //       } catch {
+  //         return false;
+  //       }
+  //     };
+
+  //     if (!isWebGLAvailable()) {
+  //       console.error("WebGL non supporté sur ce navigateur");
+  //       return;
+  //     }
+
+  //     const scene = new Three.Scene();
+  //     const camera = new Three.PerspectiveCamera(
+  //       60,
+  //       window.innerWidth / window.innerHeight,
+  //       1,
+  //       10000
+  //     );
+  //     camera.position.z = 1200;
+
+  //     const renderer = new Three.WebGLRenderer({
+  //       alpha: true,
+  //       antialias: true,
+  //     });
+  //     renderer.setSize(window.innerWidth, window.innerHeight);
+
+  //     mountRef.current.innerHTML = "";
+  //     mountRef.current.appendChild(renderer.domElement);
+
+  //     const light = new Three.DirectionalLight(0xffffff, 1);
+  //     light.position.set(-1, 0, 1);
+  //     scene.add(light);
+  //     scene.add(camera);
+
+  //     rendererRef.current = renderer;
+  //     cameraRef.current = camera;
+  //     sceneRef.current = scene;
+
+  //     const animate = () => {
+  //       requestAnimationFrame(animate);
+  //       const delta = clockRef.current.getDelta();
+  //       smokeParticles.current.forEach((p) => {
+  //         p.rotation.z += delta * 0.05;
+  //         p.position.x += (Math.random() - 0.5) * 0.2;
+  //         p.position.y += (Math.random() - 0.5) * 0.2;
+  //       });
+  //       renderer.render(scene, camera);
+  //     };
+
+  //     const loader = new Three.TextureLoader();
+  //     // "/smoke.png",
+  //     loader.load(
+  //       `${process.env.NEXT_PUBLIC_DEHORS_URL}/smoke.png`,
+  //       (texture) => {
+  //         const material = new Three.MeshLambertMaterial({
+  //           color: 0xffffff,
+  //           map: texture,
+  //           transparent: true,
+  //           opacity: 0.1,
+  //           depthWrite: false,
+  //           blending: Three.AdditiveBlending,
+  //         });
+
+  //         const geometry = new Three.PlaneGeometry(2000, 2000);
+  //         const gridSize = 4;
+  //         const spacing = 600;
+
+  //         for (let x = 0; x < gridSize; x++) {
+  //           for (let y = 0; y < gridSize; y++) {
+  //             for (let z = 0; z < gridSize; z++) {
+  //               const particle = new Three.Mesh(geometry, material);
+  //               particle.position.set(
+  //                 (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
+  //                 (y - gridSize / 2) * spacing +
+  //                   (Math.random() - 0.5) * 100 +
+  //                   250,
+  //                 (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
+  //               );
+  //               particle.rotation.z = Math.random() * 360;
+  //               scene.add(particle);
+  //               smokeParticles.current.push(particle);
+  //             }
+  //           }
+  //         }
+
+  //         animate();
+  //         serverLog({ key: "debug", value: "animation" });
+  //       },
+  //       undefined,
+  //       (err) => {
+  //         console.error("Erreur chargement texture :", err);
+  //         serverLog({ key: "error", value: JSON.stringify(err) });
+  //       }
+  //     );
+  //   });
+
+  //   window.addEventListener("resize", handleResize);
+  //   return () => window.removeEventListener("resize", handleResize);
+  // }, []);
+
+  const loadTexture = (url) => {
+    return new Promise((resolve, reject) => {
+      const loader = new Three.TextureLoader();
+      loader.load(
+        url,
+        (texture) => resolve(texture),
+        undefined,
+        (err) => reject(err)
+      );
+    });
+  };
+
+  useEffect(() => {
+    const loadScene = async () => {
       if (!mountRef.current) return;
 
       const isWebGLAvailable = () => {
@@ -450,52 +573,55 @@ export default function ThreeSmoke() {
         renderer.render(scene, camera);
       };
 
-      const loader = new Three.TextureLoader();
-      // "/smoke.png",
-      loader.load(
-        `${process.env.NEXT_PUBLIC_DEHORS_URL}/smoke.png`,
-        (texture) => {
-          const material = new Three.MeshLambertMaterial({
-            color: 0xffffff,
-            map: texture,
-            transparent: true,
-            opacity: 0.1,
-            depthWrite: false,
-            blending: Three.AdditiveBlending,
-          });
+      try {
+        const texture = await loadTexture("/smoke.png");
+        const material = new Three.MeshLambertMaterial({
+          color: 0xffffff,
+          map: texture,
+          transparent: true,
+          opacity: 0.1,
+          depthWrite: false,
+          blending: Three.AdditiveBlending,
+        });
 
-          const geometry = new Three.PlaneGeometry(2000, 2000);
-          const gridSize = 4;
-          const spacing = 600;
+        const geometry = new Three.PlaneGeometry(2000, 2000);
+        const gridSize = 4;
+        const spacing = 600;
 
-          for (let x = 0; x < gridSize; x++) {
-            for (let y = 0; y < gridSize; y++) {
-              for (let z = 0; z < gridSize; z++) {
-                const particle = new Three.Mesh(geometry, material);
-                particle.position.set(
-                  (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
-                  (y - gridSize / 2) * spacing +
-                    (Math.random() - 0.5) * 100 +
-                    250,
-                  (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
-                );
-                particle.rotation.z = Math.random() * 360;
-                scene.add(particle);
-                smokeParticles.current.push(particle);
-              }
+        for (let x = 0; x < gridSize; x++) {
+          for (let y = 0; y < gridSize; y++) {
+            for (let z = 0; z < gridSize; z++) {
+              const particle = new Three.Mesh(geometry, material);
+              particle.position.set(
+                (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 100,
+                (y - gridSize / 2) * spacing +
+                  (Math.random() - 0.5) * 100 +
+                  250,
+                (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 100
+              );
+              particle.rotation.z = Math.random() * 360;
+              scene.add(particle);
+              smokeParticles.current.push(particle);
             }
           }
-
-          animate();
-          serverLog({ key: "debug", value: "animation" });
-        },
-        undefined,
-        (err) => {
-          console.error("Erreur chargement texture :", err);
-          serverLog({ key: "error", value: JSON.stringify(err) });
         }
-      );
-    });
+
+        animate();
+        serverLog({ key: "debug", value: "animation" });
+      } catch (err) {
+        console.error("Erreur chargement texture :", err);
+        serverLog({ key: "error", value: "Erreur chargement texture" });
+      }
+    };
+
+    loadScene();
+
+    const handleResize = () => {
+      if (!rendererRef.current || !cameraRef.current) return;
+      rendererRef.current.setSize(window.innerWidth, window.innerHeight);
+      cameraRef.current.aspect = window.innerWidth / window.innerHeight;
+      cameraRef.current.updateProjectionMatrix();
+    };
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
