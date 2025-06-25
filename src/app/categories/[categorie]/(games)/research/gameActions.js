@@ -214,6 +214,36 @@ export async function backToPreparing({ roomId, roomToken }) {
   await saveAndDispatchData({ roomId, roomToken, newData });
 }
 
+export async function goToHidding({ roomId, roomToken }) {
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  const startDate = Date.now() + 120000; // 2 mn
+  // const startDate = Date.now() + 90000; // 1,5 mn
+  // const startDate = Date.now() + 7000; // 7s
+
+  const newData = { ...roomData, startDate, phase: "hidding" };
+
+  await saveAndDispatchData({ roomId, roomToken, newData });
+}
+
+export async function goToPlaying({ roomId, roomToken }) {
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  const newData = { ...roomData, phase: "playing" };
+
+  await saveAndDispatchData({ roomId, roomToken, newData });
+}
+
 export async function sendPosition({ roomId, user, newPosition }) {
   await wait({ roomId });
 

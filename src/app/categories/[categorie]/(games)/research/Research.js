@@ -15,10 +15,11 @@ export default function Research({
   onlineGamers,
   gameData,
   storedLocation,
+  setGameBackground,
 }) {
   const mode = gameData.options?.mode;
   const isAdmin = gameData.admin === user.name;
-  const [showNext, setShowNext] = useState(true);
+  const [showNext, setShowNext] = useState(false);
 
   const [isEnded, setIsEnded] = useState(false);
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function Research({
           user={user}
           gameData={gameData}
           setShowNext={setShowNext}
+          setGameBackground={setGameBackground}
         />
       )}
 

@@ -186,6 +186,7 @@ export default function Room({
   const lastAdminPingRef = useRef();
   const [multiGuestId, setMultiGuestId] = useState();
   const [multiGuestDataId, setMultiGuestDataId] = useState();
+  const [inGameUser, setInGameUser] = useState();
   const [joinError, setJoinError] = useState();
   const [isPrivate, setIsPrivate] = useState();
   const [geoLocation, setGeoLocation] = useState(null);
@@ -213,6 +214,7 @@ export default function Room({
 
   const [options, setOptions] = useState({});
   const [gameData, setGameData] = useState({});
+  const [gameBackground, setGameBackground] = useState("smoke");
   const [onlineGamers, setOnlineGamers] = useState([]);
 
   const [showPlayers, setShowPlayers] = useState(true);
@@ -1186,6 +1188,23 @@ export default function Room({
   //     adminNameRef.current = gameData.admin;
   //   }
   // }, [gameData.admin, user]);
+  // ------------------------------
+
+  // inGameUser
+  useEffect(() => {
+    if (
+      !isLaunched ||
+      !uniqueName ||
+      (user.multiGuest && (!multiGuestId || !multiGuestDataId))
+    )
+      return;
+    setInGameUser({
+      ...user,
+      name: uniqueName,
+      ...(!!multiGuestId ? { id: multiGuestId } : {}),
+      ...(!!multiGuestDataId ? { dataId: multiGuestDataId } : {}),
+    });
+  }, [isLaunched, uniqueName, user, multiGuestId, multiGuestDataId]);
   // ------------------------------
 
   // deleted_group: return home
@@ -2198,11 +2217,13 @@ export default function Room({
         </div>
       </div>
     );
+  } else if (!inGameUser) {
+    return <div className="h-screen w-screen bg-black" />;
   } else {
     return (
       // <div className="absolute h-screen w-full z-50 bg-black">
       <div className="relative h-screen w-full z-50 bg-black">
-        <ThreeSmoke />
+        {gameBackground === "smoke" && <ThreeSmoke />}
         <UserContext.Provider value={{ userParams, pusher, pusherPresence }}>
           <div
             className={`z-[60] w-full h-full relative`}
@@ -2215,15 +2236,11 @@ export default function Room({
               <Game
                 roomId={roomId}
                 roomToken={roomToken}
-                user={{
-                  ...user,
-                  name: uniqueName,
-                  ...(!!multiGuestId ? { id: multiGuestId } : {}),
-                  ...(!!multiGuestDataId ? { dataId: multiGuestDataId } : {}),
-                }}
+                user={inGameUser}
                 onlineGamers={onlineGamers}
                 gameData={gameData}
                 storedLocation={geoLocation} //searching game only
+                setGameBackground={setGameBackground}
               />
             </div>
           </div>
