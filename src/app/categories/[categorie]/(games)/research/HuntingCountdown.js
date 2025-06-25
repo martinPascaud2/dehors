@@ -16,7 +16,6 @@ export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
     const syncTime = async () => {
       const t0 = Date.now();
       const serverTime = await getServerTime();
-      const timeDifferenceBetweenServerAndUser = serverTime - t0;
       const t1 = Date.now();
 
       const estimatedClientTimeAtResponse = (t0 + t1) / 2;
@@ -24,15 +23,8 @@ export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
         "serverTime - estimatedClientTimeAtResponse",
         serverTime - estimatedClientTimeAtResponse
       );
-      console.log(
-        "timeDifferenceBetweenServerAndUser",
-        timeDifferenceBetweenServerAndUser
-      );
-      setOffset(
-        serverTime -
-          estimatedClientTimeAtResponse +
-          timeDifferenceBetweenServerAndUser
-      );
+
+      setOffset(serverTime - estimatedClientTimeAtResponse);
     };
 
     syncTime();
