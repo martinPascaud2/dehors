@@ -8,6 +8,28 @@ import { saveAndDispatchData, saveData } from "@/components/Room/actions";
 import free from "@/utils/queue/free";
 import wait from "@/utils/queue/wait";
 
+const initPositions = async ({ gamers }) => {
+  await Promise.all(
+    gamers.map(async (gamer) => {
+      if (!gamer.multiGuest) {
+        await prisma.user.update({
+          where: { id: gamer.id },
+          data: { huntingPosition: null },
+        });
+      } else {
+        await prisma.multiguest.upsert({
+          where: { id: gamer.dataId },
+          update: { huntingPosition: null },
+          create: {
+            id: gamer.dataId,
+            huntingPosition: null,
+          },
+        });
+      }
+    })
+  );
+};
+
 export async function launchGame({
   roomId,
   roomToken,
@@ -57,6 +79,8 @@ export async function launchGame({
 
   let newData;
   if (options.mode === "Hunted") {
+    await initPositions({ gamers: gamersAndGuests });
+
     newData = {
       admin: startedRoom.admin,
       viceAdmin,
@@ -283,8 +307,8 @@ export async function sendPosition({ roomId, user, newPosition }) {
         ).huntingPosition;
         allPositions.push({
           name: gamer.name,
-          latitude: huntingPosition[0],
-          longitude: huntingPosition[1],
+          latitude: huntingPosition ? huntingPosition[0] : null,
+          longitude: huntingPosition ? huntingPosition[1] : null,
         });
       } else {
         const huntingPosition = (
@@ -295,8 +319,8 @@ export async function sendPosition({ roomId, user, newPosition }) {
         ).huntingPosition;
         allPositions.push({
           name: gamer.name,
-          latitude: huntingPosition[0],
-          longitude: huntingPosition[1],
+          latitude: huntingPosition ? huntingPosition[0] : null,
+          longitude: huntingPosition ? huntingPosition[1] : null,
         });
       }
     })
@@ -337,6 +361,8 @@ export async function goNewHunting({
   const newDecliners = [];
   const { gamers } = gameData;
   const newPositions = [];
+
+  await initPositions({ gamers });
 
   gamers.forEach((gamer) => {
     newPositions.push({ name: gamer.name, latitude: null, longitude: null });
