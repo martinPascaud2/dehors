@@ -2,18 +2,36 @@
 
 import { useEffect, useState, useRef } from "react";
 
+import getServerTime from "@/utils/getServerTime";
+
 import { specialElite } from "@/assets/fonts";
 
 export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
-  const [leftMilliseconds, setLeftMilliseconds] = useState(null);
+  const [offset, setOffset] = useState(0);
   const intervalRef = useRef(null);
+  const [leftMilliseconds, setLeftMilliseconds] = useState(null);
   const [hasSent, setHasSent] = useState(false);
 
   useEffect(() => {
-    if (!finishCountdownDate) return;
+    const syncTime = async () => {
+      const t0 = Date.now();
+      const serverTime = await getServerTime();
+      const t1 = Date.now();
+
+      const estimatedClientTimeAtResponse = (t0 + t1) / 2;
+      setOffset(serverTime - estimatedClientTimeAtResponse);
+    };
+
+    syncTime();
+  }, []);
+
+  useEffect(() => {
+    if (!finishCountdownDate || !offset) return;
 
     function updateTime() {
-      const current = Date.now();
+      //   const current = Date.now();
+      const current = Date.now() + offset;
+
       const remaining = Math.max(finishCountdownDate - current, 0);
       setLeftMilliseconds(remaining);
 
@@ -28,7 +46,7 @@ export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
     intervalRef.current = setInterval(updateTime, 49);
 
     return () => clearInterval(intervalRef.current);
-  }, [finishCountdownDate, hasSent, onTimeUp]);
+  }, [finishCountdownDate, hasSent, onTimeUp, offset]);
 
   const leftMinutes = Math.floor(leftMilliseconds / 1000 / 60);
   const leftSeconds = Math.floor((leftMilliseconds / 1000) % 60);
