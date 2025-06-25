@@ -490,11 +490,11 @@ const PreparingPhase = ({
     if (!ffaTeams && !vsTeams) return;
 
     let ready = true;
-    if (options.distribution === "FFA") {
+    if (options.distribution === "FFA" && ffaTeams) {
       if (ffaTeams.hunters.size === 0) ready = false;
       if (ffaTeams.hunteds.size === 0 && ffaTeams.undefineds.size === 0)
         ready = false;
-    } else if (options.distribution === "VS") {
+    } else if (options.distribution === "VS" && vsTeams) {
       if (vsTeams.red.hunters.size === 0) ready = false;
       if (vsTeams.blue.hunters.size === 0) ready = false;
       if (vsTeams.red.hunteds.size === 0 && vsTeams.red.undefineds.size === 0)
@@ -1170,7 +1170,7 @@ export default function Hunting({
     const { distribution } = gameData.options;
     if (distribution !== "VS") return;
 
-    if (phase === "preparing" && gameData.keepTeams) {
+    if (phase === "preparing" && gameData.keepTeams && gameData.proposed) {
       setVsTeams({
         red: {
           hunters: new Set(gameData.proposed.red.hunters.sort()),
