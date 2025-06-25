@@ -505,6 +505,8 @@ const PreparingPhase = ({
     setReady(ready);
   }, [ffaTeams, vsTeams, options.distribution]);
 
+  console.log("vsTeams", vsTeams);
+
   return (
     <>
       {isAdmin && !showedOptions && (
