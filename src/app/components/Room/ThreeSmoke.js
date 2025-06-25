@@ -608,7 +608,6 @@ export default function ThreeSmoke() {
         }
 
         animate();
-        serverLog({ key: "debug", value: "animation" });
       } catch (err) {
         console.error("Erreur chargement texture :", err);
         serverLog({ key: "error", value: JSON.stringify(err) });
