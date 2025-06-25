@@ -19,10 +19,6 @@ export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
       const t1 = Date.now();
 
       const estimatedClientTimeAtResponse = (t0 + t1) / 2;
-      console.log(
-        "serverTime - estimatedClientTimeAtResponse",
-        serverTime - estimatedClientTimeAtResponse
-      );
 
       setOffset(serverTime - estimatedClientTimeAtResponse);
     };
@@ -33,10 +29,7 @@ export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
   useEffect(() => {
     if (!finishCountdownDate || !offset) return;
 
-    console.log("offset 2nd effect", offset);
-
     function updateTime() {
-      //   const current = Date.now();
       const current = Date.now() + offset;
 
       const remaining = Math.max(finishCountdownDate - current, 0);
