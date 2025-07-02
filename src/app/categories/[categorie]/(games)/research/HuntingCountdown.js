@@ -3,14 +3,23 @@
 import { useEffect, useState, useRef } from "react";
 
 import getServerTime from "@/utils/getServerTime";
+import { sendPosition } from "./gameActions";
 
 import { specialElite } from "@/assets/fonts";
+import { FaEye } from "react-icons/fa";
 
-export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
+export default function HuntingCountdown({
+  finishCountdownDate,
+  onTimeUp,
+  roomId,
+  roomToken,
+  user,
+}) {
   const [offset, setOffset] = useState(0);
   const intervalRef = useRef(null);
   const [leftMilliseconds, setLeftMilliseconds] = useState(null);
   const [hasSent, setHasSent] = useState(false);
+  const sentGeolocRef = useRef(false);
 
   useEffect(() => {
     const syncTime = async () => {
@@ -48,6 +57,35 @@ export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
     return () => clearInterval(intervalRef.current);
   }, [finishCountdownDate, hasSent, onTimeUp, offset]);
 
+  useEffect(() => {
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const coords = [pos.coords.latitude, pos.coords.longitude];
+
+        if (
+          leftMilliseconds <= 15000 &&
+          leftMilliseconds !== null &&
+          !sentGeolocRef.current
+        ) {
+          sendPosition({
+            roomId,
+            roomToken,
+            user,
+            newPosition: coords,
+            isHidding: true,
+          }); // no await
+          sentGeolocRef.current = true;
+        }
+      },
+      (err) => console.error(err),
+      {
+        enableHighAccuracy: true,
+      }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [leftMilliseconds, roomId, roomToken, user]);
+
   const leftMinutes = Math.floor(leftMilliseconds / 1000 / 60);
   const leftSeconds = Math.floor((leftMilliseconds / 1000) % 60);
   const leftCs = Math.floor((leftMilliseconds % 1000) / 10);
@@ -82,6 +120,89 @@ export default function HuntingCountdown({ finishCountdownDate, onTimeUp }) {
               <div className="font-bold w-[2ch] flex justify-center">
                 {leftCs < 10 ? "0" : ""}
                 {leftCs}
+              </div>
+            </div>
+          }
+        </>
+      )}
+    </div>
+  );
+}
+
+export function NextLocationCountdown({
+  nextLocation,
+  onTimeUp,
+  geolocation,
+  isRevealReady,
+}) {
+  const [offset, setOffset] = useState();
+  const intervalRef = useRef(null);
+  const [leftMilliseconds, setLeftMilliseconds] = useState(null);
+
+  useEffect(() => {
+    const syncTime = async () => {
+      const t0 = Date.now();
+      const serverTime = await getServerTime();
+      const t1 = Date.now();
+
+      const estimatedClientTimeAtResponse = (t0 + t1) / 2;
+
+      setOffset(serverTime - estimatedClientTimeAtResponse);
+    };
+
+    syncTime();
+  }, []);
+
+  useEffect(() => {
+    if (!nextLocation || Number.isNaN(offset)) return;
+
+    async function updateTime() {
+      const current = Date.now() + offset;
+
+      const remaining = Math.max(nextLocation - current, 0);
+      setLeftMilliseconds(remaining);
+
+      if (remaining === 0) {
+        onTimeUp?.();
+        clearInterval(intervalRef.current);
+      }
+    }
+
+    updateTime();
+    intervalRef.current = setInterval(updateTime, 49);
+
+    return () => clearInterval(intervalRef.current);
+  }, [nextLocation, onTimeUp, offset]);
+
+  const leftMinutes = Math.floor(leftMilliseconds / 1000 / 60);
+  const leftSeconds = Math.floor((leftMilliseconds / 1000) % 60);
+
+  if ((leftMilliseconds === 0 || isRevealReady) && geolocation === "manual")
+    return (
+      <div className="w-full h-full flex justify-center items-center">
+        <FaEye className="h-full w-20 text-amber-700" />
+      </div>
+    );
+
+  return (
+    <div
+      className={`h-full flex justify-center items-center text-red-700 ${specialElite.className} text-3xl mt-2`}
+    >
+      {(leftMinutes > 0 || (leftMinutes === 0 && leftSeconds >= 0)) && (
+        <>
+          {leftMinutes > 0 && (
+            <div className="font-bold w-full h-full flex justify-center items-center">
+              <div className="font-bold w-[1ch] h-full flex justify-end items-center">
+                {leftMinutes}
+              </div>
+              <span>{leftMinutes ? "\u00A0:\u00A0" : ""}</span>
+            </div>
+          )}
+          {
+            <div className="font-bold w-full h-full flex justify-center items-center">
+              <div className="font-bold w-[2ch] h-full flex justify-center items-center">
+                {leftSeconds < 10 ? "0" : ""}
+                {leftSeconds}
               </div>
             </div>
           }

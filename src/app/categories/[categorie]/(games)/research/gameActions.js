@@ -246,47 +246,30 @@ export async function goToHidding({ roomId, roomToken }) {
     })
   ).gameData;
 
-  const startDate = Date.now() + 120000; // 2 mn
-  // const startDate = Date.now() + 90000; // 1,5 mn
-  // const startDate = Date.now() + 7000; // 7s
+  const { proposed } = roomData;
+  const distribution = roomData.options.distribution;
 
-  const newData = { ...roomData, startDate, phase: "hidding" };
+  let teams;
+  if (distribution === "FFA") {
+    teams = {
+      hunters: proposed.hunters,
+      hunteds: proposed.hunteds.map((hunted) => ({
+        name: hunted,
+        alive: true,
+      })),
+    };
+  }
+
+  const startDate = Date.now() + 120000; // 2 mn
+
+  const newData = { ...roomData, startDate, teams, phase: "hidding" };
 
   await saveAndDispatchData({ roomId, roomToken, newData });
 }
 
 export async function goToPlaying({ roomId, roomToken }) {
-  const roomData = (
-    await prisma.room.findFirst({
-      where: { id: roomId },
-      select: { gameData: true },
-    })
-  ).gameData;
-
-  const newData = { ...roomData, phase: "playing" };
-
-  await saveAndDispatchData({ roomId, roomToken, newData });
-}
-
-export async function sendPosition({ roomId, user, newPosition }) {
   await wait({ roomId });
 
-  if (user.multiGuest) {
-    await prisma.multiguest.upsert({
-      where: { id: user.dataId },
-      update: { huntingPosition: newPosition },
-      create: {
-        id: user.dataId,
-        huntingPosition: newPosition,
-      },
-    });
-  } else {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { huntingPosition: newPosition },
-    });
-  }
-
   const roomData = (
     await prisma.room.findFirst({
       where: { id: roomId },
@@ -294,59 +277,280 @@ export async function sendPosition({ roomId, user, newPosition }) {
     })
   ).gameData;
 
-  const { gamers } = roomData;
-  const allPositions = [];
-  await Promise.all(
-    gamers.map(async (gamer) => {
-      if (!gamer.multiGuest) {
-        const huntingPosition = (
-          await prisma.user.findFirst({
-            where: { id: gamer.id },
-            select: { huntingPosition: true },
-          })
-        ).huntingPosition;
-        allPositions.push({
-          name: gamer.name,
-          latitude: huntingPosition ? huntingPosition[0] : null,
-          longitude: huntingPosition ? huntingPosition[1] : null,
-        });
-      } else {
-        const huntingPosition = (
-          await prisma.multiguest.findFirst({
-            where: { id: gamer.dataId },
-            select: { huntingPosition: true },
-          })
-        ).huntingPosition;
-        allPositions.push({
-          name: gamer.name,
-          latitude: huntingPosition ? huntingPosition[0] : null,
-          longitude: huntingPosition ? huntingPosition[1] : null,
-        });
-      }
-    })
-  );
+  const { phase } = roomData;
 
-  const newData = { ...roomData, positions: allPositions };
-  await saveData({ roomId, newData });
+  if (phase !== "hidding") {
+    await free({ roomId });
+    return;
+  }
+
+  const { geolocation } = roomData.options;
+
+  const lastLocation = 0;
+
+  const nextLocation =
+    geolocation === "automatic"
+      ? Date.now() + roomData.options.countDownTime
+      : null; // null for first manual
+
+  const newData = {
+    ...roomData,
+    phase: "playing",
+    lastLocation,
+    nextLocation,
+  };
+
+  await saveAndDispatchData({ roomId, roomToken, newData });
   await free({ roomId });
 }
 
-export async function getPositions({ roomId }) {
-  let positions;
+export async function sendPosition({
+  roomId,
+  user,
+  newPosition,
+  isHidding = false,
+}) {
+  const positionUpdatePromise = user.multiGuest
+    ? prisma.multiguest.upsert({
+        where: { id: user.dataId },
+        update: { huntingPosition: newPosition },
+        create: {
+          id: user.dataId,
+          huntingPosition: newPosition,
+        },
+      })
+    : prisma.user.update({
+        where: { id: user.id },
+        data: { huntingPosition: newPosition },
+      });
+
+  const [roomRecord] = await Promise.all([
+    prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    }),
+    positionUpdatePromise,
+  ]);
+
+  const roomData = roomRecord.gameData;
+  const { gamers, options, teams } = roomData;
+  const { distribution } = options;
+
+  const userIds = gamers.filter((g) => !g.multiGuest).map((g) => g.id);
+  const guestIds = gamers.filter((g) => g.multiGuest).map((g) => g.dataId);
+
+  const [users, guests] = await Promise.all([
+    prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, huntingPosition: true },
+    }),
+    prisma.multiguest.findMany({
+      where: { id: { in: guestIds } },
+      select: { id: true, huntingPosition: true },
+    }),
+  ]);
+
+  const userMap = new Map(users.map((u) => [u.id, u.huntingPosition]));
+  const guestMap = new Map(guests.map((g) => [g.id, g.huntingPosition]));
+
+  const hunterSet = new Set(teams.hunters);
+  const huntedMap = new Map(
+    teams.hunteds.map((hunted) => [hunted.name, hunted.alive])
+  );
+
+  const allPositions = gamers.map((gamer) => {
+    const isGuest = gamer.multiGuest;
+    const huntingPosition = isGuest
+      ? guestMap.get(gamer.dataId)
+      : userMap.get(gamer.id);
+
+    let role, alive;
+    if (distribution === "FFA") {
+      if (hunterSet.has(gamer.name)) {
+        role = "hunter";
+      } else {
+        role = "hunted";
+        alive = huntedMap.get(gamer.name);
+      }
+    }
+
+    return {
+      name: gamer.name,
+      latitude: huntingPosition?.[0] ?? null,
+      longitude: huntingPosition?.[1] ?? null,
+      role,
+      alive,
+    };
+  });
+
+  let { lastLocation, lastPositions } = roomData;
+  const { countDownTime } = options;
+
+  const shouldUpdateLastPositions = isHidding
+    ? true
+    : Date.now() > lastLocation + countDownTime;
+
+  const newLastPositions = shouldUpdateLastPositions
+    ? allPositions
+    : lastPositions;
+
+  const newData = {
+    ...roomData,
+    positions: allPositions,
+    lastPositions: newLastPositions,
+  };
+
+  await saveData({ roomId, newData });
+}
+
+export async function getLastPositions({ roomId, roomToken, gamerRole }) {
   try {
+    await wait({ roomId });
+
     const roomData = (
       await prisma.room.findFirst({
         where: { id: roomId },
         select: { gameData: true },
       })
     ).gameData;
-    positions = roomData.positions;
+
+    const { lastLocation, nextLocation, positions, lastPositions } = roomData;
+    const { countDownTime } = roomData.options;
+
+    let newLastPositions;
+    let newLastLocation;
+    let newNextLocation;
+    let shouldDispatch = false;
+    if (
+      (nextLocation - Date.now() < 0 || nextLocation === null) &&
+      gamerRole === "hunter"
+    ) {
+      newLastLocation = Date.now();
+      newNextLocation = Date.now() + countDownTime;
+      newLastPositions = positions;
+      shouldDispatch = true;
+    } else {
+      newLastLocation = lastLocation;
+      newNextLocation = nextLocation;
+      newLastPositions = lastPositions;
+    }
+
+    const filteredLastPositions =
+      gamerRole === "hunter"
+        ? newLastPositions
+        : newLastPositions.filter((pos) => pos.role === "hunted");
+
+    const newData = {
+      ...roomData,
+      lastPositions: newLastPositions,
+      lastLocation: newLastLocation,
+      nextLocation: newNextLocation,
+    };
+
+    shouldDispatch &&
+      (await saveAndDispatchData({ roomId, roomToken, newData }));
+    await free({ roomId });
+    return filteredLastPositions;
   } catch (error) {
-    console.error("getPositions error:", error);
+    console.error("getLastPositions error:", error);
   } finally {
-    await prisma.$disconnect();
   }
-  return positions;
+}
+
+export async function sendGrab({ grabber, grabbed, roomId, roomToken }) {
+  await wait({ roomId });
+
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  const newGrabEvents = roomData.grabEvents || {};
+  newGrabEvents[grabbed] = grabber;
+
+  const newData = {
+    ...roomData,
+    grabEvents: newGrabEvents,
+  };
+
+  await saveAndDispatchData({ roomId, roomToken, newData });
+  await free({ roomId });
+}
+
+export async function amIGrabbed({
+  isGrabbed,
+  grabbed,
+  grabber,
+  roomId,
+  roomToken,
+}) {
+  await wait({ roomId });
+
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  const { teams, grabEvents: newGrabEvents } = roomData;
+
+  if (!isGrabbed) {
+    newGrabEvents[grabbed] = null;
+    const newData = {
+      ...roomData,
+      grabEvents: newGrabEvents,
+    };
+    await saveAndDispatchData({ roomId, roomToken, newData });
+    await free({ roomId });
+  } else {
+    const { hunteds } = teams;
+
+    const hunted = hunteds.find((h) => h.name === grabbed);
+    const newHunted = { ...hunted, alive: false };
+    const newHunteds = hunteds.filter((h) => h.name !== grabbed);
+    newHunteds.push(newHunted);
+    const newTeams = { ...teams, hunteds: newHunteds };
+
+    if (!newTeams.hunteds.some((hunted) => hunted.alive)) {
+      const newData = {
+        ...roomData,
+        teams: newTeams,
+        phase: "ending",
+        ended: true,
+      };
+      await saveAndDispatchData({ roomId, roomToken, newData });
+      await free({ roomId });
+      return;
+    }
+
+    const newData = {
+      ...roomData,
+      teams: newTeams,
+      grabEvent: { grabbed, grabber },
+    };
+
+    await saveAndDispatchData({ roomId, roomToken, newData });
+    await free({ roomId });
+  }
+}
+
+export async function resetGrabEvent({ roomId, roomToken }) {
+  await wait({ roomId });
+
+  const roomData = (
+    await prisma.room.findFirst({
+      where: { id: roomId },
+      select: { gameData: true },
+    })
+  ).gameData;
+
+  const newData = { ...roomData, grabEvent: null };
+
+  await saveAndDispatchData({ roomId, roomToken, newData });
+  await free({ roomId });
 }
 
 export async function goNewHunting({
@@ -370,6 +574,7 @@ export async function goNewHunting({
   const newProposed = areTeamKept ? gameData.proposed : undefined;
   const newWaitingForGamers = [];
   const newKeepTeams = !!gameData.proposed && areTeamKept; // check if keepTeams is needed
+  const options = newOptions ? newOptions : gameData.options;
   const newEnded = false;
 
   const newData = {
@@ -377,11 +582,16 @@ export async function goNewHunting({
     phase: newPhase,
     acceptedGamers: newAcceptedGamers,
     decliners: newDecliners,
-    positions: newPositions,
     proposed: newProposed,
     waitingForGamers: newWaitingForGamers,
     keepTeams: newKeepTeams,
-    options: newOptions ? newOptions : gameData.options,
+    positions: newPositions,
+    lastPositions: undefined,
+    lastLocation: Date.now(),
+    nextLocation: Date.now() + options.countDownTime,
+    grabEvents: {},
+    grabEvent: null,
+    options,
     ended: newEnded,
   };
   await saveAndDispatchData({ roomId, roomToken, newData });

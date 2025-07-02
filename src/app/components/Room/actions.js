@@ -725,7 +725,6 @@ export async function saveData({ roomId, newData }) {
   } catch (error) {
     console.error("saveData error:", error);
   } finally {
-    await prisma.$disconnect();
   }
 }
 

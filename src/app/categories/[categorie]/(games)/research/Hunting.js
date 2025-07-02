@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import ReactDOM from "react-dom";
 
+import Image from "next/image";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
+import { specialElite } from "@/assets/fonts";
 import "leaflet/dist/leaflet.css";
 import "./hunting.css";
 import { IoShuffleOutline } from "react-icons/io5";
@@ -17,6 +20,7 @@ import {
   GiDeathSkull,
 } from "react-icons/gi";
 import { FaHandPointUp } from "react-icons/fa";
+import { TfiHandDrag } from "react-icons/tfi";
 
 import { TouchBackend } from "react-dnd-touch-backend";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -25,20 +29,31 @@ import { usePreview } from "react-dnd-preview";
 const ItemType = "Item";
 
 import shuffleArray from "@/utils/shuffleArray";
+import getServerTime from "@/utils/getServerTime";
 
 import NextStep from "@/components/NextStep";
 import ToggleCheckbox from "@/components/ToggleCheckbox";
 import IGCountdownOption from "@/components/IGCountdownOption";
-import HuntingCountdown from "./HuntingCountdown";
+import HuntingCountdown, { NextLocationCountdown } from "./HuntingCountdown";
 
-const userIcon = new L.Icon({
+const hunterIcon = new L.Icon({
   iconUrl: "/position.png",
+  iconSize: [35, 35],
+});
+
+const huntedIcon = new L.Icon({
+  iconUrl: "/runIconGreen.png",
+  iconSize: [35, 35],
+});
+
+const hereIcon = new L.Icon({
+  iconUrl: "/hereIcon.png",
   iconSize: [35, 35],
 });
 
 import {
   sendPosition,
-  getPositions,
+  getLastPositions,
   proposeTeams,
   accept,
   decline,
@@ -46,6 +61,9 @@ import {
   goNewHunting,
   goToHidding,
   goToPlaying,
+  sendGrab,
+  amIGrabbed,
+  resetGrabEvent,
 } from "./gameActions";
 
 const DroppableItem = ({
@@ -711,7 +729,7 @@ const PreparingPhase = ({
         />
       )}
 
-      {!isAdmin && <div>Création des équipes</div>}
+      {!isAdmin && <div>Ecran de création des équipes</div>}
     </>
   );
 };
@@ -908,13 +926,7 @@ const ProposingPhase = ({
   );
 };
 
-const HiddingPhase = ({
-  isAdmin,
-  gameData,
-  roomId,
-  roomToken,
-  setShowNext,
-}) => {
+const HiddingPhase = ({ isAdmin, gameData, roomId, roomToken, user }) => {
   const onTimeUp = useCallback(async () => {
     if (!isAdmin || !roomId || !roomToken) return;
     await goToPlaying({ roomId, roomToken });
@@ -926,9 +938,13 @@ const HiddingPhase = ({
         <HuntingCountdown
           finishCountdownDate={gameData.startDate}
           onTimeUp={onTimeUp}
+          roomId={roomId}
+          roomToken={roomToken}
+          user={user}
         />
       </div>
-      {isAdmin && (
+
+      {/* {isAdmin && (
         <>
           <div
             onClick={() => goNewHunting({ gameData, roomId, roomToken })}
@@ -943,27 +959,34 @@ const HiddingPhase = ({
             Passer
           </div>
         </>
-      )}
+      )} */}
     </div>
   );
 };
 
-const RealtimeMap = ({ position }) => {
+// on user
+const UpdateView = ({ center, zoom, setZoom }) => {
   const map = useMap();
+
   useEffect(() => {
-    map.setView(position);
-  }, [position]);
+    map.on("zoomend", function (e) {
+      setZoom(e.target._zoom);
+    });
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+
   return null;
 };
 
-const FitBounds = ({ positions }) => {
+// see all
+const FitBounds = ({ positions, position, zoom, setZoom }) => {
   const map = useMap();
 
   useEffect(() => {
     if (!positions || positions.length === 0) return;
 
     const bounds = L.latLngBounds(
-      positions
+      [...positions, { latitude: position[0], longitude: position[1] }]
         .filter(
           (p) =>
             typeof p.latitude === "number" &&
@@ -975,24 +998,85 @@ const FitBounds = ({ positions }) => {
     );
 
     if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: zoom });
     }
-  }, [positions, map]);
+
+    map.on("zoomend", function (e) {
+      setZoom(e.target._zoom);
+    });
+  }, [positions, position, zoom, map]);
 
   return null;
 };
 
-const Map = ({ isAdmin, user, gameData, roomId, roomToken, positions }) => {
-  const [position, setPosition] = useState([48.8566, 2.3522]);
-  const activatedWatch = useRef(false);
+const Alert = ({ onClick }) => {
+  const [canClick, setCanClick] = useState(false);
 
-  console.log("positions", positions);
+  const handleClick = useCallback(() => {
+    if (!canClick) return;
+    onClick && onClick();
+  }, [canClick, onClick]);
+
+  return ReactDOM.createPortal(
+    <div className="w-[100vw] h-[100vh] fixed top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] bg-black flex justify-center items-center z-[1000]">
+      <style jsx>
+        {`
+          @keyframes expandSize {
+            0% {
+              transform: scale(0);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
+        `}
+      </style>
+
+      <div
+        className={`w-full h-full flex flex-col justify-center items-center`}
+        style={{ animation: "expandSize 5s" }}
+        onAnimationEnd={() => setCanClick(true)}
+        onClick={handleClick}
+      >
+        <div
+          className={`${specialElite.className} text-7xl text-red-700 transform scale-y-150`}
+        >
+          Position
+        </div>
+        <div
+          className={`${specialElite.className} text-7xl text-red-700 transform scale-y-150`}
+        >
+          envoyée !
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const Map = ({
+  user,
+  isAdmin,
+  gamerRole,
+  roomId,
+  roomToken,
+  view,
+  positions,
+  zoom,
+  setZoom,
+  showAlert,
+  setShowAlert,
+  gameData,
+}) => {
+  const [position, setPosition] = useState([48.8566, 2.3522]);
+  // const activatedWatch = useRef(false);
+
   // dev
-  const simulateNewPosition = async () => {
-    const newPosition = [position[0] + 0.001, position[1] + 0.001];
-    setPosition(newPosition);
-    await sendPosition({ roomId, roomToken, user, newPosition });
-  };
+  // const simulateNewPosition = async () => {
+  //   const newPosition = [position[0] + 0.001, position[1] + 0.001];
+  //   setPosition(newPosition);
+  //   await sendPosition({ roomId, roomToken, user, newPosition });
+  // };
 
   useEffect(() => {
     let lastSentTime = 0;
@@ -1003,119 +1087,517 @@ const Map = ({ isAdmin, user, gameData, roomId, roomToken, positions }) => {
         setPosition(coords);
 
         const now = Date.now();
-
-        // const newPosition = coords;
-        // sendPosition({ roomId, roomToken, user, newPosition });
         if (now - lastSentTime >= 10000) {
           lastSentTime = now;
+
           const newPosition = coords;
-          if (activatedWatch.current) {
-            sendPosition({ roomId, roomToken, user, newPosition });
-          }
+          sendPosition({ roomId, roomToken, user, newPosition }); // no await
         }
       },
       (err) => console.error(err),
       {
         enableHighAccuracy: true,
-        // timeout: 10000
       }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+  if (showAlert) return <Alert onClick={() => setShowAlert(false)} />;
+
   return (
-    <div className="w-full h-full flex justify-center items-center relative">
-      <MapContainer
-        id="map"
-        center={position}
-        zoom={17}
-        style={{ height: "70vh", width: "90%" }}
-        // zoomControl={false}
-        zoomControl={true}
-        scrollWheelZoom={false}
-        doubleClickZoom={false}
-        touchZoom={false}
+    <>
+      {showAlert && <Alert onClick={() => setShowAlert(false)} />}
+
+      <div
+        className={`w-full h-full flex justify-center items-center relative ${
+          showAlert && "hidden"
+        }`}
       >
-        <RealtimeMap position={position} />
-        <FitBounds positions={positions} />
-
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
-        {positions &&
-          positions.map((p, i) => {
-            const { latitude, longitude } = p;
-            if (
-              typeof latitude !== "number" ||
-              typeof longitude !== "number" ||
-              isNaN(latitude) ||
-              isNaN(longitude)
-            )
-              return null;
-            return (
-              <div key={i} className="w-full h-full">
-                <Marker position={[latitude, longitude]} icon={userIcon}>
-                  <Popup>
-                    Dernière position de {p.name} :<br />
-                    {latitude}, {longitude}
-                  </Popup>
-                </Marker>
-              </div>
-            );
-          })}
-        <button
-          onClick={simulateNewPosition}
-          style={{ position: "absolute", zIndex: 1000, bottom: 0 }}
+        <MapContainer
+          id="map"
+          center={position}
+          zoom={zoom}
+          style={{ height: "70vh", width: "90%" }}
+          zoomControl={true}
+          scrollWheelZoom={false}
+          doubleClickZoom={false}
+          touchZoom={false}
         >
-          Simuler
-        </button>
-        {isAdmin && (
-          <div
-            onClick={() => goNewHunting({ gameData, roomId, roomToken })}
-            className="absolute flex justify-center bottom-0 z-[1000] left-1/2 translate-x-[–50%]"
+          {view === "user" && (
+            <UpdateView center={position} zoom={zoom} setZoom={setZoom} />
+          )}
+          {view === "all" && (
+            <FitBounds
+              positions={positions}
+              position={position}
+              zoom={zoom}
+              setZoom={setZoom}
+            />
+          )}
+
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+
+          {positions &&
+            positions.map((p, i) => {
+              const { name, role, latitude, longitude } = p;
+              if (
+                (role === "hunter" && gamerRole === "hunted") ||
+                typeof latitude !== "number" ||
+                typeof longitude !== "number" ||
+                isNaN(latitude) ||
+                isNaN(longitude)
+              )
+                return null;
+              return (
+                <div key={i} className="w-full h-full">
+                  <Marker
+                    position={[latitude, longitude]}
+                    icon={role === "hunter" ? hunterIcon : huntedIcon}
+                  >
+                    <Popup>
+                      {name === user.name
+                        ? "Ta dernière position :"
+                        : `Dernière position de ${p.name} :`}
+                      <br />
+                      {latitude}, {longitude}
+                    </Popup>
+                  </Marker>
+                </div>
+              );
+            })}
+
+          {position && (
+            <Marker position={[position[0], position[1]]} icon={hereIcon}>
+              <Popup>
+                Votre position :<br />
+                {position[0]}, {position[1]}
+              </Popup>
+            </Marker>
+          )}
+
+          {/* <button
+            onClick={simulateNewPosition}
+            style={{ position: "absolute", zIndex: 1000, bottom: 0 }}
           >
-            Reset
-          </div>
-        )}
-        <button
-          onClick={() => (activatedWatch.current = !activatedWatch.current)}
-          style={{ position: "absolute", zIndex: 1000, bottom: 0, right: 0 }}
+            Simuler
+          </button> */}
+          {isAdmin && (
+            <div
+              onClick={() => goNewHunting({ gameData, roomId, roomToken })}
+              className="absolute flex justify-center bottom-0 z-[1000] left-1/2 translate-x-[–50%]"
+            >
+              Reset
+            </div>
+          )}
+          {/* <button
+            onClick={() => (activatedWatch.current = !activatedWatch.current)}
+            style={{ position: "absolute", zIndex: 1000, bottom: 0, right: 0 }}
+          >
+            {activatedWatch.current
+              ? "Désactiver\u00A0watch"
+              : "Activer\u00A0watch"}
+          </button> */}
+        </MapContainer>
+      </div>
+    </>
+  );
+};
+
+const HunterGrab = ({
+  gameData,
+  setShowHunterGrab,
+  roomId,
+  roomToken,
+  userName,
+}) => {
+  const teams = useMemo(() => {
+    return gameData.teams;
+  }, [gameData.teams]);
+  const hunteds = useMemo(() => {
+    return teams.hunteds;
+  }, [teams.hunteds]);
+  const [aimed, setAimed] = useState();
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const ConfirmButtons = useCallback(
+    () => (
+      <div className="absolute bottom-0 w-2/3 flex justify-center gap-2">
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowHunterGrab(false);
+            sendGrab({ grabber: userName, grabbed: aimed, roomId, roomToken });
+          }}
+          className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center"
         >
-          {activatedWatch.current
-            ? "Désactiver\u00A0watch"
-            : "Activer\u00A0watch"}
-        </button>
-      </MapContainer>
+          <CheckIcon className="h-10 w-10" />
+        </div>
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowConfirm(false);
+            setAimed();
+          }}
+          className="border border-red-700 bg-red-300 text-red-700 p-1 w-full flex justify-center items-center"
+        >
+          <XMarkIcon className="h-10 w-10" />
+        </div>
+      </div>
+    ),
+    [userName, aimed, roomId, roomToken]
+  );
+
+  return (
+    <div
+      onClick={() => setShowHunterGrab(false)}
+      className="w-full h-full relative flex flex-col gap-2 justify-center items-center"
+    >
+      {hunteds.map((hunted, i) => {
+        const isAlive = hunted.alive;
+        const isAimed = hunted.name === aimed;
+
+        let color;
+        if (!isAlive) {
+          color = "slate";
+        } else if (isAimed) {
+          color = "amber";
+        } else {
+          color = "sky";
+        }
+
+        return (
+          <div
+            key={i}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isAlive) return;
+              setAimed(hunted.name);
+              setShowConfirm(true);
+            }}
+            className={`w-2/3 p-2 border border-${color}-700 bg-${color}-300 text-${color}-700 text-lg flex gap-2 justify-center items-center font-semibold`}
+          >
+            {
+              <GiDeathSkull
+                className={`h-8 w-8 text-slate-700 ${isAlive && "collapse"}`}
+              />
+            }
+            {hunted.name}
+            {
+              <GiDeathSkull
+                className={`h-8 w-8 text-slate-700 ${isAlive && "collapse"}`}
+              />
+            }
+          </div>
+        );
+      })}
+      {showConfirm && <ConfirmButtons />}
+    </div>
+  );
+};
+
+const ImGrabbedBy = ({ grabbed, grabber, roomId, roomToken }) => {
+  return (
+    <div className="w-full h-full flex flex-col justify-center items-center relative">
+      <div className="text-3xl font-semibold">{grabber} vous a attrapé !</div>
+      <div className="absolute bottom-0 w-2/3 flex justify-center gap-2">
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            amIGrabbed({
+              isGrabbed: true,
+              grabbed,
+              grabber,
+              roomId,
+              roomToken,
+            });
+          }}
+          className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center"
+        >
+          <CheckIcon className="h-10 w-10" />
+        </div>
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            amIGrabbed({
+              isGrabbed: false,
+              grabbed,
+              grabber,
+              roomId,
+              roomToken,
+            });
+          }}
+          className="border border-red-700 bg-red-300 text-red-700 p-1 w-full flex justify-center items-center"
+        >
+          <XMarkIcon className="h-10 w-10" />
+        </div>
+      </div>
     </div>
   );
 };
 
 const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
-  const [positions, setPositions] = useState(gameData.positions);
+  const gamerRole = useMemo(() => {
+    if (!gameData.teams) return null;
+    const { distribution } = gameData.options;
+    if (distribution === "FFA") {
+      if (gameData.teams.hunters.some((hunter) => hunter === user.name)) {
+        return "hunter";
+      } else {
+        return "hunted";
+      }
+    }
+  }, [gameData.teams, gameData.options]);
+  const [nextLocation, lastLocation] = useMemo(() => {
+    return [gameData.nextLocation, gameData.lastLocation];
+  }, [gameData.nextLocation, gameData.lastLocation]);
+  const geolocation = useMemo(() => {
+    return gameData.options.geolocation;
+  }, [gameData.options.geolocation]);
+  const grabber = useMemo(() => {
+    const grabEvents = gameData.grabEvents;
+    if (!grabEvents || !grabEvents[user.name]) return null;
+    return grabEvents[user.name];
+  }, [gameData.grabEvents, user.name]);
+  const isAlive = useMemo(() => {
+    if (gamerRole === "hunter") return true;
+    const gamerStatus = gameData.teams.hunteds.find(
+      (hunted) => hunted.name === user.name
+    );
+    return gamerStatus.alive;
+  }, [gamerRole, gameData.teams.hunteds, user.name]);
+  const [view, setView] = useState("all");
+  const [zoom, setZoom] = useState(17);
+  const [positions, setPositions] = useState();
+  const [lastSaw, setLastSaw] = useState(0);
+  const [isRevealReady, setIsRevealReady] = useState(true);
+  const [showAlert, setShowAlert] = useState(false);
+  const [showHunterGrab, setShowHunterGrab] = useState(false);
+  const [grabEvent, setGrabEvent] = useState();
 
-  return (
-    <>
-      <Map
-        isAdmin={isAdmin}
-        user={user}
+  const getPositions = useCallback(async () => {
+    if (
+      isNaN(lastLocation) ||
+      isNaN(nextLocation) ||
+      !roomId ||
+      !roomToken ||
+      !gamerRole
+    )
+      return;
+
+    const serverTime = await getServerTime();
+
+    setIsRevealReady(false);
+    setLastSaw(serverTime);
+
+    if (lastSaw > lastLocation && nextLocation - serverTime > 0) return;
+
+    const newPositions = await getLastPositions({
+      roomId,
+      roomToken,
+      gamerRole,
+    });
+    setPositions(newPositions);
+  }, [
+    geolocation,
+    lastSaw,
+    lastLocation,
+    nextLocation,
+    roomId,
+    roomToken,
+    gamerRole,
+  ]);
+
+  const onHuntersReady = useCallback(async () => {
+    if (geolocation === "automatic" && gamerRole === "hunter") {
+      getPositions();
+    } else {
+      setIsRevealReady(true);
+    }
+  }, [geolocation, gamerRole, roomId, roomToken]);
+
+  useEffect(() => {
+    if (geolocation === "automatic") {
+      getPositions();
+      setView("all");
+    } else if (gamerRole === "hunted") {
+      geolocation === "manual" && setIsRevealReady(true);
+    }
+    nextLocation && gamerRole === "hunted" && setShowAlert(true);
+  }, [nextLocation, geolocation, gamerRole]);
+
+  useEffect(() => {
+    if (gameData.grabEvent) {
+      setGrabEvent(gameData.grabEvent);
+      setShowHunterGrab(false);
+    }
+  }, [gameData.grabEvent]);
+
+  if (!isAlive)
+    return (
+      <div className="w-full h-full flex justify-center items-center">
+        Dead mode
+      </div>
+    );
+
+  if (showHunterGrab)
+    return (
+      <HunterGrab
         gameData={gameData}
+        setShowHunterGrab={setShowHunterGrab}
         roomId={roomId}
         roomToken={roomToken}
-        positions={positions}
+        userName={user.name}
       />
+    );
+
+  if (grabber) {
+    return (
+      <ImGrabbedBy
+        grabbed={user.name}
+        grabber={grabber}
+        roomId={roomId}
+        roomToken={roomToken}
+      />
+    );
+  }
+
+  if (grabEvent)
+    return ReactDOM.createPortal(
       <div
         onClick={async () => {
-          const newPositions = await getPositions({ roomId });
-          setPositions(newPositions);
+          await resetGrabEvent({ roomId, roomToken });
+          setGrabEvent();
         }}
-        className="absolute bottom-10"
+        className="w-[100vw] h-[100vh] fixed top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] bg-black flex justify-center items-center z-[1000] text-3xl font-semibold text-red-700"
       >
-        Positions
+        {grabEvent.grabber} a attrapé {grabEvent.grabbed}&nbsp;!
+      </div>,
+      document.body
+    );
+
+  return (
+    <div className="w-full h-full relative">
+      <Map
+        user={user}
+        isAdmin={isAdmin}
+        gamerRole={gamerRole}
+        roomId={roomId}
+        roomToken={roomToken}
+        view={view}
+        positions={positions}
+        zoom={zoom}
+        setZoom={setZoom}
+        showAlert={showAlert}
+        setShowAlert={setShowAlert}
+        gameData={gameData}
+      />
+      <div className="absolute bottom-0 flex w-full justify-center items-center gap-8">
+        <div
+          onClick={() => {
+            setView("all");
+            setZoom(17);
+            if (geolocation !== "manual") return;
+            getPositions();
+          }}
+          className="w-20 h-20 p-2 flex justify-center items-center"
+        >
+          <NextLocationCountdown
+            nextLocation={nextLocation}
+            geolocation={geolocation}
+            isRevealReady={isRevealReady}
+            onTimeUp={onHuntersReady}
+          />
+        </div>
+
+        <div
+          onClick={async () => {
+            setView("user");
+          }}
+          className="w-20 h-full p-2 flex justify-center items-center"
+        >
+          <Image src="/hereIcon.png" width={500} height={500} alt="here-icon" />
+        </div>
+
+        {gamerRole === "hunter" && (
+          <TfiHandDrag
+            onClick={() => setShowHunterGrab(true)}
+            className="w-20 h-full p-2 flex justify-center items-center text-amber-700 pb-4"
+          />
+        )}
       </div>
-    </>
+    </div>
+  );
+};
+
+const EndingPhase = ({ grabEvents }) => {
+  const [grabbersVictims, setGrabbersVictims] = useState();
+  const [showEndingAlert, setShowEndingAlert] = useState(true);
+
+  useEffect(() => {
+    const newGrabbersVictims = Object.entries(grabEvents).reduce(
+      (acc, [victim, grabber]) => {
+        if (!acc[grabber]) {
+          acc[grabber] = [];
+        }
+        acc[grabber].push(victim);
+        return acc;
+      },
+      {}
+    );
+    setGrabbersVictims(newGrabbersVictims);
+  }, [grabEvents]);
+
+  if (showEndingAlert)
+    return ReactDOM.createPortal(
+      <div
+        onClick={() => setShowEndingAlert(false)}
+        className="w-[100vw] h-[100vh] fixed top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] bg-black flex flex-col justify-center items-center z-[1000]"
+      >
+        <div
+          className={`text-white text-3xl font-semibold ${specialElite.className}`}
+        >
+          Les chassés
+        </div>
+        <div
+          className={`text-white text-3xl font-semibold ${specialElite.className}`}
+        >
+          ont tous été attrapés !
+        </div>
+      </div>,
+      document.body
+    );
+
+  if (!grabbersVictims) return null;
+
+  return (
+    <div className="w-full h-full flex flex-col justify-center items-center gap-2">
+      {Object.entries(grabbersVictims).map(([grabber, victims]) => (
+        <div
+          key={grabber}
+          className="w-full flex flex-col justify-center items-center"
+        >
+          <div
+            className={`w-full flex justify-center items-center text-3xl font-bold ${specialElite.className}`}
+          >
+            {grabber} a attrapé :
+          </div>
+          <div className="w-full flex flex-col justify-center items-center">
+            {victims.map((victim) => (
+              <div
+                key={victim}
+                className={`text-2xl font-semibold ${specialElite.className}`}
+              >
+                {victim}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 };
 
@@ -1211,8 +1693,6 @@ export default function Hunting({
     else setGameBackground("smoke");
   }, [phase]);
 
-  if (isEnded) return null;
-
   return (
     <div className="h-full w-full flex flex-col items-center relative">
       {phase === "preparing" && (
@@ -1246,6 +1726,7 @@ export default function Hunting({
           gameData={gameData}
           roomId={roomId}
           roomToken={roomToken}
+          user={user}
           setShowNext={setShowNext}
         />
       )}
@@ -1259,6 +1740,8 @@ export default function Hunting({
           roomToken={roomToken}
         />
       )}
+
+      {phase === "ending" && <EndingPhase grabEvents={gameData.grabEvents} />}
     </div>
   );
 }
