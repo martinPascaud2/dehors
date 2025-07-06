@@ -10,7 +10,8 @@ export async function middleware(request) {
     request.nextUrl.pathname.startsWith("/manifest.json") ||
     request.nextUrl.pathname.startsWith("/icon") ||
     request.nextUrl.pathname.startsWith("/categoriesIcons/") ||
-    request.nextUrl.pathname.startsWith("/smoke")
+    request.nextUrl.pathname.startsWith("/smoke") ||
+    request.nextUrl.pathname.startsWith("/position")
   ) {
     console.log("000 request.nextUrl.pathname", request.nextUrl.pathname);
 
