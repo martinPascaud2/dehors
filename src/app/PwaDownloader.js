@@ -24,6 +24,8 @@ export default function PwaDownloader() {
   };
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     if (isBrowser()) {
       window.addEventListener("beforeinstallprompt", (e) => {
         setDeferredPrompt(e);

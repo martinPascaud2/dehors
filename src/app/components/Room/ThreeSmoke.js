@@ -619,6 +619,8 @@ export default function ThreeSmoke() {
     loadScene();
 
     const handleResize = () => {
+      if (typeof window === "undefined") return;
+
       if (!rendererRef.current || !cameraRef.current) return;
       rendererRef.current.setSize(window.innerWidth, window.innerHeight);
       cameraRef.current.aspect = window.innerWidth / window.innerHeight;

@@ -93,6 +93,8 @@ export default function Modal({ children, isOpen, onClose }) {
 }
 
 export function InputModal({ isOpen, onClose, action, name, message }) {
+  if (typeof window === "undefined") return null;
+
   const windowHeight = useMemo(() => window.innerHeight, []);
   const [windowResizedHeight, setWindowResizedHeight] = useState(
     window.visualViewport.height
