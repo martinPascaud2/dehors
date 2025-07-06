@@ -37,7 +37,7 @@ import IGCountdownOption from "@/components/IGCountdownOption";
 import HuntingCountdown, { NextLocationCountdown } from "./HuntingCountdown";
 
 const hunterIcon = new L.Icon({
-  iconUrl: "/position.png",
+  iconUrl: `${process.env.NEXT_PUBLIC_DEHORS_URL}/position.png`,
   iconSize: [35, 35],
 });
 

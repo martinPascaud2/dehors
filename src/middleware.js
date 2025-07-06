@@ -59,7 +59,8 @@ export async function middleware(request) {
     request.nextUrl.pathname !== "/categories/back/backToLobby/" &&
     request.nextUrl.pathname !== "/api/pusherAuth/" &&
     !request.nextUrl.pathname.startsWith("/categoriesIcons/") &&
-    !request.nextUrl.pathname.startsWith("/smoke")
+    !request.nextUrl.pathname.startsWith("/smoke") &&
+    !request.nextUrl.pathname.startsWith("/position")
   ) {
     console.log("333 request.nextUrl.pathname", request.nextUrl.pathname);
 
