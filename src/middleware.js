@@ -11,8 +11,11 @@ export async function middleware(request) {
     request.nextUrl.pathname.startsWith("/icon") ||
     request.nextUrl.pathname.startsWith("/categoriesIcons/") ||
     request.nextUrl.pathname.startsWith("/smoke")
-  )
+  ) {
+    console.log("000 request.nextUrl.pathname", request.nextUrl.pathname);
+
     return NextResponse.next();
+  }
 
   //isolate the client's requested path
   if (request.nextUrl.pathname.startsWith("/_next")) {
