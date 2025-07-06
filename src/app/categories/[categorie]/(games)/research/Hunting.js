@@ -42,12 +42,12 @@ const hunterIcon = new L.Icon({
 });
 
 const huntedIcon = new L.Icon({
-  iconUrl: "/runIconGreen.png",
+  iconUrl: `${process.env.NEXT_PUBLIC_DEHORS_URL}/runIconGreen.webp`,
   iconSize: [35, 35],
 });
 
 const hereIcon = new L.Icon({
-  iconUrl: "/hereIcon.png",
+  iconUrl: `${process.env.NEXT_PUBLIC_DEHORS_URL}/hereIcon.webp`,
   iconSize: [35, 35],
 });
 
