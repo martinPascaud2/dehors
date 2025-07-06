@@ -30,6 +30,8 @@ export default function EndGame({
     setPath(newPath);
   }, [gameData, user]);
 
+  if (typeof window === "undefined") return null;
+
   return (
     <div className={`flex items-center justify-center`}>
       {isFirst && <div>Recherche de la prochaine partie...</div>}

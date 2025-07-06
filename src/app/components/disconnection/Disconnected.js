@@ -351,7 +351,8 @@ export default function Disconnected({
     !onlineGamers?.length ||
     !gamers?.length ||
     !disconnectedList?.length ||
-    gameData.ended
+    gameData.ended ||
+    typeof window === "undefined"
   )
     return null;
 

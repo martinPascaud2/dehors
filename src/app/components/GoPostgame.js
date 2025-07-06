@@ -17,6 +17,8 @@ export default function GoPostgame({
   const pusher = contextValue.pusher;
   const pusherPresence = contextValue.pusherPresence;
 
+  if (typeof window === "undefined") return null;
+
   return (
     <StaticNextStep
       onClick={async () => {

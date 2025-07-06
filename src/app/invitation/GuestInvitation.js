@@ -18,6 +18,8 @@ export default function GuestInvitation({ searchParams, setCookieToken }) {
   }, [inputRef]);
 
   const joinGame = async () => {
+    if (typeof window === "undefined") return;
+
     try {
       // await getLocation();
 

@@ -188,6 +188,8 @@ const SettingsButtons = ({
 
   const handleAccountPressed = useCallback(
     async (event) => {
+      if (typeof window === "undefined") return;
+
       setIsAccountPressed(false);
       if (locked) return;
       // setSetting("password");
@@ -259,6 +261,8 @@ const SettingsButtons = ({
 
   const handleDiscoPressed = useCallback(
     async (event) => {
+      if (typeof window === "undefined") return;
+
       setIsDiscoPressed(false);
       if (locked) return;
       event.stopPropagation();
@@ -292,6 +296,8 @@ const SettingsButtons = ({
 
   const handleQrcodePressed = useCallback(
     async (event) => {
+      if (typeof window === "undefined") return;
+
       setIsQrcodePressed(false);
       if (locked || setting === "qrCode") return;
       setSetting("qrCode");
@@ -2057,6 +2063,8 @@ export default function Categories({
 
   const QrCodeScanner = useMemo(() => {
     const requestCameraAccess = async () => {
+      if (typeof window === "undefined") return;
+
       if (setting !== "camera" || stopScan) return;
 
       try {

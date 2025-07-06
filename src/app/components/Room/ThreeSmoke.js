@@ -514,6 +514,8 @@ export default function ThreeSmoke() {
   };
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const loadScene = async () => {
       if (!mountRef.current) return;
 

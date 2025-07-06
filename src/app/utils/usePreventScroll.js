@@ -4,6 +4,8 @@ import { useEffect } from "react";
 
 export default function usePreventScroll() {
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const preventDefault = (e) => e.preventDefault();
 
     const stayAtTop = () => {

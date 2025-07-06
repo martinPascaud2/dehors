@@ -15,6 +15,8 @@ export default function DeleteGroup({ roomToken, roomId }) {
   const pusher = contextValue.pusher;
   const pusherPresence = contextValue.pusherPresence;
 
+  if (typeof window === "undefined") return null;
+
   return (
     <button
       onClick={async () => {

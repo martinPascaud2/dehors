@@ -692,7 +692,7 @@ export default function Room({
   ]);
 
   useEffect(() => {
-    if (!joinError) return;
+    if (!joinError || typeof window === "undefined") return;
     setTimeout(() => {
       window.location.href = "/";
     }, 3000);
@@ -1055,7 +1055,8 @@ export default function Room({
       !gameData.nextGame ||
       !gameName ||
       isStarted === undefined ||
-      !user
+      !user ||
+      typeof window === "undefined"
     )
       return;
     if (
@@ -1230,6 +1231,8 @@ export default function Room({
     }
   }, [isStarted, isLaunching, isLaunched]);
   // ------------------------------
+
+  if (typeof window === "undefined") return null;
 
   if (joinError) {
     return (
