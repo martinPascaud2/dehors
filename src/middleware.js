@@ -29,6 +29,7 @@ export async function middleware(request) {
     request.nextUrl.pathname !== "/invitation/" &&
     request.nextUrl.pathname !== "/guest/"
   ) {
+    console.log("111 request.nextUrl.pathname", request.nextUrl.pathname);
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -40,6 +41,8 @@ export async function middleware(request) {
       request.nextUrl.pathname === "/signin/") &&
     userStatus !== "Guest"
   ) {
+    console.log("222 request.nextUrl.pathname", request.nextUrl.pathname);
+
     return NextResponse.redirect(new URL("/categories", request.url));
   }
 
@@ -54,6 +57,8 @@ export async function middleware(request) {
     !request.nextUrl.pathname.startsWith("/categoriesIcons/") &&
     !request.nextUrl.pathname.startsWith("/smoke")
   ) {
+    console.log("333 request.nextUrl.pathname", request.nextUrl.pathname);
+
     return NextResponse.redirect(new URL("/", request.url));
   }
 
