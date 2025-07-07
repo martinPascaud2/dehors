@@ -131,9 +131,10 @@ export default function HuntingCountdown({
 
 export function NextLocationCountdown({
   nextLocation,
-  onTimeUp,
   geolocation,
   isRevealReady,
+  gamerRole,
+  onTimeUp,
 }) {
   const [offset, setOffset] = useState();
   const intervalRef = useRef(null);
@@ -177,16 +178,29 @@ export function NextLocationCountdown({
   const leftMinutes = Math.floor(leftMilliseconds / 1000 / 60);
   const leftSeconds = Math.floor((leftMilliseconds / 1000) % 60);
 
-  if ((leftMilliseconds === 0 || isRevealReady) && geolocation === "manual")
+  if (
+    (leftMilliseconds === 0 || isRevealReady) &&
+    geolocation === "manual" &&
+    gamerRole === "hunter"
+  )
     return (
       <div className="w-full h-full flex justify-center items-center">
-        <FaEye className="h-full w-20 text-amber-700" />
+        <FaEye className="h-full w-full text-amber-700" />
+      </div>
+    );
+
+  if (leftMilliseconds === 0 && gamerRole === "hunted")
+    return (
+      <div
+        className={`w-full h-full flex justify-center items-center text-red-700 text-5xl ${specialElite.className} mt-4`}
+      >
+        !!!
       </div>
     );
 
   return (
     <div
-      className={`h-full flex justify-center items-center text-red-700 ${specialElite.className} text-3xl mt-2`}
+      className={`h-full flex justify-center items-center text-red-700 ${specialElite.className} text-5xl mt-4`}
     >
       {(leftMinutes > 0 || (leftMinutes === 0 && leftSeconds >= 0)) && (
         <>

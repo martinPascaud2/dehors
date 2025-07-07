@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import ReactDOM from "react-dom";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import Image from "next/image";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -9,7 +10,7 @@ import L from "leaflet";
 import { specialElite } from "@/assets/fonts";
 import "leaflet/dist/leaflet.css";
 import "./hunting.css";
-import { IoShuffleOutline } from "react-icons/io5";
+import { IoShuffleOutline, IoReturnUpBackOutline } from "react-icons/io5";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { LightningIcon, PersonSimpleRunIcon } from "@phosphor-icons/react";
 import { FaBullseye } from "react-icons/fa6";
@@ -18,9 +19,11 @@ import {
   GiAutomaticSas,
   GiAngelOutfit,
   GiDeathSkull,
+  GiMidnightClaw,
 } from "react-icons/gi";
-import { FaHandPointUp } from "react-icons/fa";
-import { TfiHandDrag } from "react-icons/tfi";
+import { FaHandPointUp, FaRegMap } from "react-icons/fa";
+import TombstoneIcon from "./TombstoneIcon";
+import RunIcon from "./RunIcon";
 
 import { TouchBackend } from "react-dnd-touch-backend";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -38,18 +41,83 @@ import HuntingCountdown, { NextLocationCountdown } from "./HuntingCountdown";
 
 const hunterIcon = new L.Icon({
   iconUrl: `${process.env.NEXT_PUBLIC_DEHORS_URL}/position.webp`,
-  iconSize: [35, 35],
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -34],
 });
 
-const huntedIcon = new L.Icon({
+const huntedIconGreen = new L.Icon({
+  iconUrl: `${process.env.NEXT_PUBLIC_DEHORS_URL}/runIcon.svg`,
+  iconSize: [34, 34],
+  className: "hunted-icon-green",
+});
+
+const huntedIconBlue = new L.Icon({
   iconUrl: `${process.env.NEXT_PUBLIC_DEHORS_URL}/runIconGreen.webp`,
-  iconSize: [35, 35],
+  iconSize: [34, 34],
+  className: "hunted-icon-blue",
 });
 
 const hereIcon = new L.Icon({
   iconUrl: `${process.env.NEXT_PUBLIC_DEHORS_URL}/hereIcon.webp`,
-  iconSize: [35, 35],
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -34],
 });
+
+const runHtmlGreen = renderToStaticMarkup(<RunIcon size={34} />);
+const runIconGreen = new L.DivIcon({
+  html: runHtmlGreen,
+  className: "",
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -34],
+});
+const runHtmlBlue = renderToStaticMarkup(<RunIcon size={34} color="#1e40af" />); // blue-800
+const runIconBlue = new L.DivIcon({
+  html: runHtmlBlue,
+  className: "",
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -34],
+});
+const runHtmlRed = renderToStaticMarkup(<RunIcon size={34} color="#991b1b" />); // red-800
+const runIconRed = new L.DivIcon({
+  html: runHtmlRed,
+  className: "",
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -34],
+});
+
+const createTombstoneIconWithNumber = ({ number, color }) => {
+  const html = renderToStaticMarkup(
+    <div style={{ position: "relative", width: 34, height: 34 }}>
+      <TombstoneIcon size={34} color="#ccc" />
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          color,
+          fontWeight: "bold",
+          fontSize: 20,
+        }}
+      >
+        {number}
+      </div>
+    </div>
+  );
+
+  return L.divIcon({
+    html: html,
+    className: "",
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40],
+  });
+};
 
 import {
   sendPosition,
@@ -152,10 +220,14 @@ const DroppableItem = ({
   return (
     <div
       ref={dropRef}
-      className="border border-2 p-1 w-full text-center font-semibold text-lg"
+      className="border border-2 p-1 w-full flex justify-around items-center"
       style={styleMap[role]}
     >
-      {name}
+      {role === "hunter" && <LightningIcon className="h-6 w-6" />}
+      {role === "hunted" && <PersonSimpleRunIcon className="h-6 w-6" />}
+      <div className="font-semibold text-lg text-center">{name}</div>
+      {role === "hunter" && <LightningIcon className="h-6 w-6" />}
+      {role === "hunted" && <PersonSimpleRunIcon className="h-6 w-6" />}
     </div>
   );
 };
@@ -201,7 +273,7 @@ const DraggableItem = ({ type, setDragged, dragged }) => {
   return (
     <div
       ref={(node) => ref(node)}
-      className={`border w-20 h-12 flex justify-center items-center`}
+      className={`border w-20 h-12 flex justify-center items-center rounded-md`}
       style={styleMap[type]}
     >
       {type === "hunter" && (
@@ -702,7 +774,7 @@ const PreparingPhase = ({
               </div>
             </div>
 
-            <div className="absolute bottom-0">
+            <div className="absolute bottom-10">
               <NextStep
                 onClick={() =>
                   proposeTeams({ ffaTeams, vsTeams, roomId, roomToken })
@@ -729,7 +801,11 @@ const PreparingPhase = ({
         />
       )}
 
-      {!isAdmin && <div>Ecran de création des équipes</div>}
+      {!isAdmin && (
+        <div className="w-full h-full flex justify-center items-center">
+          Ecran de création des équipes
+        </div>
+      )}
     </>
   );
 };
@@ -765,7 +841,7 @@ const ProposingPhase = ({
 
   const ChooseButtons = useCallback(
     () => (
-      <div className="absolute bottom-0 w-2/3 flex justify-center gap-2">
+      <div className="absolute bottom-10 w-2/3 flex justify-center gap-2">
         <div
           onClick={() => accept({ userName, roomId, roomToken })}
           className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center"
@@ -792,17 +868,21 @@ const ProposingPhase = ({
           {hunters.map((hunter) => (
             <div
               key={hunter}
-              className="border border-2 p-1 w-full text-center font-semibold text-lg border-amber-700 bg-amber-300 text-amber-700"
+              className="border border-2 p-1 w-full border-amber-700 bg-amber-300 text-amber-700 flex justify-around items-center"
             >
-              {hunter}
+              <LightningIcon className="h-6 w-6" />
+              <div className="font-semibold text-lg text-center">{hunter}</div>
+              <LightningIcon className="h-6 w-6" />
             </div>
           ))}
           {hunteds.map((hunted) => (
             <div
               key={hunted}
-              className="border border-2 p-1 w-full text-center font-semibold text-lg border-sky-700 bg-sky-300 text-sky-700"
+              className="border border-2 p-1 w-full border-sky-700 bg-sky-300 text-sky-700 flex justify-around items-center"
             >
-              {hunted}
+              <PersonSimpleRunIcon className="h-6 w-6" />
+              <div className="font-semibold text-lg text-center">{hunted}</div>
+              <PersonSimpleRunIcon className="h-6 w-6" />
             </div>
           ))}
         </div>
@@ -913,7 +993,7 @@ const ProposingPhase = ({
       )}
 
       {!isAdmin && decliners.some((decliner) => decliner === userName) && (
-        <div className="absolute bottom-0 w-1/3 flex justify-center">
+        <div className="absolute bottom-10 w-1/3 flex justify-center">
           <div
             onClick={() => accept({ userName, roomId, roomToken })}
             className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center mx-1"
@@ -945,20 +1025,12 @@ const HiddingPhase = ({ isAdmin, gameData, roomId, roomToken, user }) => {
       </div>
 
       {/* {isAdmin && (
-        <>
-          <div
-            onClick={() => goNewHunting({ gameData, roomId, roomToken })}
-            className="absolute bottom-0 left-0 text-white"
-          >
-            Reset
-          </div>
-          <div
-            onClick={() => onTimeUp()}
-            className="absolute bottom-0 text-white right-0"
-          >
-            Passer
-          </div>
-        </>
+        <div
+          onClick={() => goNewHunting({ gameData, roomId, roomToken })}
+          className="absolute bottom-0 left-0 text-white"
+        >
+          Reset
+        </div>
       )} */}
     </div>
   );
@@ -1062,17 +1134,19 @@ const Map = ({
   roomToken,
   view,
   positions,
+  deathsPositions,
   zoom,
   setZoom,
   showAlert,
   setShowAlert,
   gameData,
 }) => {
-  const [position, setPosition] = useState([48.8566, 2.3522]);
+  const [position, setPosition] = useState([0, 0]);
   // const activatedWatch = useRef(false);
 
   // dev
   // const simulateNewPosition = async () => {
+  //   if (!position) return;
   //   const newPosition = [position[0] + 0.001, position[1] + 0.001];
   //   setPosition(newPosition);
   //   await sendPosition({ roomId, roomToken, user, newPosition });
@@ -1116,7 +1190,7 @@ const Map = ({
       >
         <MapContainer
           id="map"
-          center={position}
+          center={position ? position : undefined}
           zoom={zoom}
           style={{ height: "70vh", width: "90%" }}
           zoomControl={true}
@@ -1125,12 +1199,16 @@ const Map = ({
           touchZoom={false}
         >
           {view === "user" && (
-            <UpdateView center={position} zoom={zoom} setZoom={setZoom} />
+            <UpdateView
+              center={position ? position : undefined}
+              zoom={zoom}
+              setZoom={setZoom}
+            />
           )}
           {view === "all" && (
             <FitBounds
               positions={positions}
-              position={position}
+              position={position ? position : undefined}
               zoom={zoom}
               setZoom={setZoom}
             />
@@ -1145,29 +1223,65 @@ const Map = ({
             attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors & CartoDB'
           />
 
-          {positions &&
-            positions.map((p, i) => {
-              const { name, role, latitude, longitude } = p;
+          {deathsPositions &&
+            deathsPositions.map((d, i) => {
+              const { grabbed, grabber, latitude, longitude } = d;
               if (
-                (role === "hunter" && gamerRole === "hunted") ||
                 typeof latitude !== "number" ||
                 typeof longitude !== "number" ||
                 isNaN(latitude) ||
                 isNaN(longitude)
               )
                 return null;
+
+              const icon = createTombstoneIconWithNumber({
+                number: i + 1,
+                color: "#166534",
+              }); // green-800
+
+              return (
+                <div key={i} className="w-full h-full">
+                  <Marker position={[latitude, longitude]} icon={icon}>
+                    <Popup>
+                      <div
+                        className={`mt-4 text-center ${specialElite.className}`}
+                      >
+                        {`${grabbed} a été attrapé par ${grabber}`}
+                      </div>
+                    </Popup>
+                  </Marker>
+                </div>
+              );
+            })}
+
+          {positions &&
+            positions.map((p, i) => {
+              const { name, role, latitude, longitude } = p;
+              const isDead = p.alive === false;
+              if (
+                (role === "hunter" && gamerRole === "hunted") ||
+                typeof latitude !== "number" ||
+                typeof longitude !== "number" ||
+                isNaN(latitude) ||
+                isNaN(longitude) ||
+                isDead
+              )
+                return null;
               return (
                 <div key={i} className="w-full h-full">
                   <Marker
                     position={[latitude, longitude]}
-                    icon={role === "hunter" ? hunterIcon : huntedIcon}
+                    icon={role === "hunter" ? hunterIcon : runIconGreen}
+                    zIndexOffset={1000}
                   >
                     <Popup>
-                      {name === user.name
-                        ? "Ta dernière position :"
-                        : `Dernière position de ${p.name} :`}
-                      <br />
-                      {latitude}, {longitude}
+                      <div
+                        className={`mt-4 text-center ${specialElite.className}`}
+                      >
+                        {name === user.name
+                          ? "Ta dernière position"
+                          : `${p.name}`}
+                      </div>
                     </Popup>
                   </Marker>
                 </div>
@@ -1175,10 +1289,15 @@ const Map = ({
             })}
 
           {position && (
-            <Marker position={[position[0], position[1]]} icon={hereIcon}>
+            <Marker
+              position={[position[0], position[1]]}
+              icon={hereIcon}
+              zIndexOffset={1500}
+            >
               <Popup>
-                Votre position :<br />
-                {position[0]}, {position[1]}
+                <div className={`mt-4 text-center ${specialElite.className}`}>
+                  Votre position
+                </div>
               </Popup>
             </Marker>
           )}
@@ -1229,7 +1348,7 @@ const HunterGrab = ({
 
   const ConfirmButtons = useCallback(
     () => (
-      <div className="absolute bottom-0 w-2/3 flex justify-center gap-2">
+      <div className="absolute bottom-10 w-2/3 flex justify-center gap-2">
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -1307,7 +1426,7 @@ const ImGrabbedBy = ({ grabbed, grabber, roomId, roomToken }) => {
   return (
     <div className="w-full h-full flex flex-col justify-center items-center relative">
       <div className="text-3xl font-semibold">{grabber} vous a attrapé !</div>
-      <div className="absolute bottom-0 w-2/3 flex justify-center gap-2">
+      <div className="absolute bottom-10 w-2/3 flex justify-center gap-2">
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -1373,7 +1492,10 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
     );
     return gamerStatus.alive;
   }, [gamerRole, gameData.teams.hunteds, user.name]);
-  const [view, setView] = useState("all");
+  const deathsPositions = useMemo(() => {
+    return gameData.deathsPositions;
+  }, [gameData.deathsPositions]);
+  const [view, setView] = useState("user");
   const [zoom, setZoom] = useState(17);
   const [positions, setPositions] = useState();
   const [lastSaw, setLastSaw] = useState(0);
@@ -1382,56 +1504,76 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
   const [showHunterGrab, setShowHunterGrab] = useState(false);
   const [grabEvent, setGrabEvent] = useState();
 
-  const getPositions = useCallback(async () => {
-    if (
-      isNaN(lastLocation) ||
-      isNaN(nextLocation) ||
-      !roomId ||
-      !roomToken ||
-      !gamerRole
-    )
-      return;
+  const getPositions = useCallback(
+    async ({ newDeath = false }) => {
+      if (
+        isNaN(lastLocation) ||
+        isNaN(nextLocation) ||
+        !roomId ||
+        !roomToken ||
+        !gamerRole
+      )
+        return;
 
-    const serverTime = await getServerTime();
+      const serverTime = await getServerTime();
 
-    setIsRevealReady(false);
-    setLastSaw(serverTime);
+      setIsRevealReady(false);
+      setLastSaw(serverTime);
 
-    if (lastSaw > lastLocation && nextLocation - serverTime > 0) return;
+      if (lastSaw > lastLocation && nextLocation - serverTime > 0 && !newDeath)
+        return;
 
-    const newPositions = await getLastPositions({
+      const newPositions = await getLastPositions({
+        roomId,
+        roomToken,
+        gamerRole,
+      });
+      setPositions(newPositions);
+    },
+    [
+      geolocation,
+      lastSaw,
+      lastLocation,
+      nextLocation,
       roomId,
       roomToken,
       gamerRole,
-    });
-    setPositions(newPositions);
-  }, [
-    geolocation,
-    lastSaw,
-    lastLocation,
-    nextLocation,
-    roomId,
-    roomToken,
-    gamerRole,
-  ]);
+    ]
+  );
 
   const onHuntersReady = useCallback(async () => {
-    if (geolocation === "automatic" && gamerRole === "hunter") {
-      getPositions();
+    if (gamerRole !== "hunter") return;
+
+    if (geolocation === "automatic") {
+      getPositions({});
     } else {
       setIsRevealReady(true);
     }
   }, [geolocation, gamerRole, roomId, roomToken]);
 
   useEffect(() => {
-    if (geolocation === "automatic") {
-      getPositions();
+    if (!lastLocation || gamerRole !== "hunter" || geolocation !== "manual")
+      return;
+
+    if (lastSaw < lastLocation) getPositions({});
+  }, [lastLocation, gamerRole, geolocation, lastSaw]);
+
+  useEffect(() => {
+    if (
+      geolocation === "automatic" ||
+      (geolocation === "manual" && gamerRole === "hunted")
+    ) {
+      getPositions({});
       setView("all");
-    } else if (gamerRole === "hunted") {
-      geolocation === "manual" && setIsRevealReady(true);
     }
     nextLocation && gamerRole === "hunted" && setShowAlert(true);
+    gamerRole === "hunted" && setIsRevealReady(false);
   }, [nextLocation, geolocation, gamerRole]);
+
+  useEffect(() => {
+    if (!deathsPositions || !deathsPositions.length) return;
+    getPositions({ newDeath: true });
+  }, [deathsPositions]);
 
   useEffect(() => {
     if (gameData.grabEvent) {
@@ -1484,7 +1626,7 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
     );
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative flex flex-col justify-center items-center">
       <Map
         user={user}
         isAdmin={isAdmin}
@@ -1493,26 +1635,34 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
         roomToken={roomToken}
         view={view}
         positions={positions}
+        deathsPositions={deathsPositions}
         zoom={zoom}
         setZoom={setZoom}
         showAlert={showAlert}
         setShowAlert={setShowAlert}
         gameData={gameData}
       />
-      <div className="absolute bottom-0 flex w-full justify-center items-center gap-8">
+
+      <div className="flex w-full h-20 justify-evenly items-center mb-10">
         <div
           onClick={() => {
             setView("all");
             setZoom(17);
             if (geolocation !== "manual") return;
-            getPositions();
+            getPositions({});
           }}
-          className="w-20 h-20 p-2 flex justify-center items-center"
+          className={`w-20 h-full flex justify-center items-center relative ${
+            view === "all" &&
+            (isRevealReady
+              ? "border border-amber-700"
+              : "border border-red-700")
+          } p-2`}
         >
           <NextLocationCountdown
             nextLocation={nextLocation}
             geolocation={geolocation}
             isRevealReady={isRevealReady}
+            gamerRole={gamerRole}
             onTimeUp={onHuntersReady}
           />
         </div>
@@ -1521,15 +1671,22 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
           onClick={async () => {
             setView("user");
           }}
-          className="w-20 h-full p-2 flex justify-center items-center"
+          className={`w-20 h-full flex justify-center items-center relative ${
+            view === "user" && "border border-red-700"
+          } p-2`}
         >
-          <Image src="/hereIcon.png" width={500} height={500} alt="here-icon" />
+          <Image
+            src="/hereIcon.webp"
+            fill
+            className="object-contain"
+            alt="here-icon"
+          />
         </div>
 
         {gamerRole === "hunter" && (
-          <TfiHandDrag
+          <GiMidnightClaw
             onClick={() => setShowHunterGrab(true)}
-            className="w-20 h-full p-2 flex justify-center items-center text-amber-700 pb-4"
+            className="w-20 h-full flex justify-center items-center text-amber-700 p-2"
           />
         )}
       </div>
@@ -1537,9 +1694,84 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
   );
 };
 
-const EndingPhase = ({ grabEvents }) => {
+const EndingFitBounds = ({ deathsPositions }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (deathsPositions && deathsPositions.length) {
+      const bounds = deathsPositions.map((pos) => [
+        pos.latitude,
+        pos.longitude,
+      ]);
+      map.fitBounds(bounds);
+    }
+  }, [deathsPositions, map]);
+
+  return null;
+};
+
+const EndingMap = ({ deathsPositions, setShowMap }) => {
+  return (
+    <div className="w-full h-full flex flex-col items-center">
+      <MapContainer
+        id="map"
+        style={{ height: "70vh", width: "90%" }}
+        zoomControl={true}
+        scrollWheelZoom={false}
+        doubleClickZoom={false}
+        touchZoom={false}
+      >
+        <EndingFitBounds deathsPositions={deathsPositions} />
+
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors & CartoDB'
+        />
+
+        {deathsPositions &&
+          deathsPositions.map((d, i) => {
+            const { grabbed, grabber, latitude, longitude } = d;
+            if (
+              typeof latitude !== "number" ||
+              typeof longitude !== "number" ||
+              isNaN(latitude) ||
+              isNaN(longitude)
+            )
+              return null;
+
+            const icon = createTombstoneIconWithNumber({
+              number: i + 1,
+              color: "#166534",
+            }); // green-800
+
+            return (
+              <div key={i} className="w-full h-full">
+                <Marker position={[latitude, longitude]} icon={icon}>
+                  <Popup>
+                    <div
+                      className={`mt-4 text-center ${specialElite.className}`}
+                    >
+                      {`${grabbed} a été attrapé par ${grabber}`}
+                    </div>
+                  </Popup>
+                </Marker>
+              </div>
+            );
+          })}
+      </MapContainer>
+
+      <IoReturnUpBackOutline
+        onClick={() => setShowMap(false)}
+        className="h-20 w-20 text-amber-700"
+      />
+    </div>
+  );
+};
+
+const EndingPhase = ({ grabEvents, deathsPositions }) => {
   const [grabbersVictims, setGrabbersVictims] = useState();
   const [showEndingAlert, setShowEndingAlert] = useState(true);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     const newGrabbersVictims = Object.entries(grabEvents).reduce(
@@ -1577,8 +1809,19 @@ const EndingPhase = ({ grabEvents }) => {
 
   if (!grabbersVictims) return null;
 
+  if (showMap)
+    return (
+      <EndingMap deathsPositions={deathsPositions} setShowMap={setShowMap} />
+    );
+
   return (
     <div className="w-full h-full flex flex-col justify-center items-center gap-2">
+      <div
+        onClick={() => setShowMap(true)}
+        className="w-full flex justify-center"
+      >
+        <FaRegMap className="w-16 h-16 text-amber-700" />
+      </div>
       {Object.entries(grabbersVictims).map(([grabber, victims]) => (
         <div
           key={grabber}
@@ -1745,7 +1988,12 @@ export default function Hunting({
         />
       )}
 
-      {phase === "ending" && <EndingPhase grabEvents={gameData.grabEvents} />}
+      {phase === "ending" && (
+        <EndingPhase
+          grabEvents={gameData.grabEvents}
+          deathsPositions={gameData.deathsPositions}
+        />
+      )}
     </div>
   );
 }

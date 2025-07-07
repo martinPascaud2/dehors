@@ -514,10 +514,44 @@ export async function amIGrabbed({
     newHunteds.push(newHunted);
     const newTeams = { ...teams, hunteds: newHunteds };
 
+    const { positions, lastPositions } = roomData;
+    const deathsPositions = roomData.deathsPositions || [];
+    const grabbedPosition = positions.find((gamer) => gamer.name === grabbed);
+    const [grabbedLatitude, grabbedLongitude] = [
+      grabbedPosition.latitude,
+      grabbedPosition.longitude,
+    ];
+    const newDeathPositions = {
+      latitude: grabbedLatitude,
+      longitude: grabbedLongitude,
+      grabbed,
+      grabber,
+    };
+    const newDeathsPositions = [...deathsPositions, newDeathPositions];
+
+    const newPositions = positions.map((p) =>
+      p.name === grabbed ? { ...p, alive: false } : p
+    );
+    const newLastPositions = lastPositions.map((l) =>
+      l.name === grabbed ? { ...l, alive: false } : l
+    );
+
+    const newData = {
+      ...roomData,
+      teams: newTeams,
+      grabEvent: { grabbed, grabber },
+      positions: newPositions,
+      lastPositions: newLastPositions,
+      deathsPositions: newDeathsPositions,
+    };
+
     if (!newTeams.hunteds.some((hunted) => hunted.alive)) {
       const newData = {
         ...roomData,
         teams: newTeams,
+        positions: newPositions,
+        lastPositions: newLastPositions,
+        deathsPositions: newDeathsPositions,
         phase: "ending",
         ended: true,
       };
@@ -525,12 +559,6 @@ export async function amIGrabbed({
       await free({ roomId });
       return;
     }
-
-    const newData = {
-      ...roomData,
-      teams: newTeams,
-      grabEvent: { grabbed, grabber },
-    };
 
     await saveAndDispatchData({ roomId, roomToken, newData });
     await free({ roomId });
@@ -586,6 +614,7 @@ export async function goNewHunting({
     waitingForGamers: newWaitingForGamers,
     keepTeams: newKeepTeams,
     positions: newPositions,
+    deathsPositions: [],
     lastPositions: undefined,
     lastLocation: Date.now(),
     nextLocation: Date.now() + options.countDownTime,
