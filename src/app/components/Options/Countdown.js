@@ -9,9 +9,10 @@ export default function Countdown({
   min,
   max,
   last,
+  def,
 }) {
   const [countDownTime, setCountDownTime] = useState(
-    (last && last / 60 / 1000) || Math.floor((min + max) / 2)
+    (last && last / 60 / 1000) || def || Math.floor((min + max) / 2)
   );
 
   const [timeoutId, setTimeoutId] = useState(null);

@@ -1,4 +1,3 @@
-// const TombstoneIcon = ({ size = 24, color = "currentColor" }) => (
 const TombstoneIcon = (
   { size = 24, primaryColor = "#030712", secondaryColor = "#6b7280" } // gray-950 gray-500
 ) => (

@@ -326,6 +326,7 @@ const InGameOptions = ({
   gameData,
   roomId,
   roomToken,
+  isEnded,
 }) => {
   const options = useMemo(() => gameData.options, []);
   const [distribution, setDistribution] = useState(options.distribution);
@@ -377,7 +378,7 @@ const InGameOptions = ({
     <div
       onClick={() => {
         setShowedOptions(false);
-        setShowNext(false);
+        !isEnded && setShowNext(false);
       }}
       className="h-full w-full relative flex flex-col justify-center items-center gap-4"
     >
@@ -442,13 +443,15 @@ const InGameOptions = ({
         </div>
       </div>
 
-      <NextStep
-        onClick={() => {
-          goNewOptions();
-        }}
-        iconName="validate"
-        ready={true}
-      />
+      {!isEnded && (
+        <NextStep
+          onClick={() => {
+            goNewOptions();
+          }}
+          iconName="validate"
+          ready={true}
+        />
+      )}
     </div>
   );
 };
@@ -463,6 +466,7 @@ const PreparingPhase = ({
   roomId,
   roomToken,
   setShowNext,
+  isEnded,
 }) => {
   const [dragged, setDragged] = useState();
   const [ready, setReady] = useState(false);
@@ -774,19 +778,21 @@ const PreparingPhase = ({
               </div>
             </div>
 
-            <div className="absolute bottom-10">
-              <NextStep
-                onClick={() =>
-                  proposeTeams({ ffaTeams, vsTeams, roomId, roomToken })
-                }
-                onLongPress={() => {
-                  setShowedOptions(true);
-                  setShowNext(true);
-                }}
-                iconName="next"
-                ready={ready}
-              />
-            </div>
+            {!isEnded && (
+              <div className="absolute bottom-10">
+                <NextStep
+                  onClick={() =>
+                    proposeTeams({ ffaTeams, vsTeams, roomId, roomToken })
+                  }
+                  onLongPress={() => {
+                    setShowedOptions(true);
+                    setShowNext(true);
+                  }}
+                  iconName="next"
+                  ready={ready}
+                />
+              </div>
+            )}
           </div>
         </DndProvider>
       )}
@@ -798,6 +804,7 @@ const PreparingPhase = ({
           roomId={roomId}
           roomToken={roomToken}
           setShowNext={setShowNext}
+          isEnded={isEnded}
         />
       )}
 
@@ -817,6 +824,7 @@ const ProposingPhase = ({
   roomId,
   roomToken,
   setShowNext,
+  isEnded,
 }) => {
   const waitingForGamers = useMemo(() => {
     return gameData.waitingForGamers.sort();
@@ -841,16 +849,16 @@ const ProposingPhase = ({
 
   const ChooseButtons = useCallback(
     () => (
-      <div className="absolute bottom-10 w-2/3 flex justify-center gap-2">
+      <div className="absolute bottom-10 w-2/3 flex justify-center gap-8">
         <div
           onClick={() => accept({ userName, roomId, roomToken })}
-          className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center"
+          className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center rounded-md"
         >
           <CheckIcon className="h-10 w-10" />
         </div>
         <div
           onClick={() => decline({ userName, roomId, roomToken })}
-          className="border border-red-700 bg-red-300 text-red-700 p-1 w-full flex justify-center items-center"
+          className="border border-red-700 bg-red-300 text-red-700 p-1 w-full flex justify-center items-center rounded-md"
         >
           <XMarkIcon className="h-10 w-10" />
         </div>
@@ -933,7 +941,7 @@ const ProposingPhase = ({
 
   return (
     <div
-      onClick={() => setShowNext(false)}
+      onClick={() => !isEnded && setShowNext(false)}
       className="w-full h-full flex flex-col items-center relative"
     >
       <div className="w-2/3 flex flex-col items-center gap-2">
@@ -969,7 +977,7 @@ const ProposingPhase = ({
         })}
       </div>
 
-      {isAdmin && (
+      {isAdmin && !isEnded && (
         <>
           {acceptedGamers.length !== gameData.gamers.length ? (
             <NextStep
@@ -996,7 +1004,7 @@ const ProposingPhase = ({
         <div className="absolute bottom-10 w-1/3 flex justify-center">
           <div
             onClick={() => accept({ userName, roomId, roomToken })}
-            className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center mx-1"
+            className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center mx-1 rounded-md"
           >
             <CheckIcon className="h-10 w-10" />
           </div>
@@ -1142,39 +1150,143 @@ const Map = ({
   gameData,
 }) => {
   const [position, setPosition] = useState([0, 0]);
-  // const activatedWatch = useRef(false);
+  const [error, setError] = useState();
+  const watchIdRef = useRef();
+  const lastSentTimeRef = useRef(0);
 
   // dev
-  // const simulateNewPosition = async () => {
-  //   if (!position) return;
-  //   const newPosition = [position[0] + 0.001, position[1] + 0.001];
-  //   setPosition(newPosition);
-  //   await sendPosition({ roomId, roomToken, user, newPosition });
-  // };
+  const simulateNewPosition = async () => {
+    if (!position) return;
+    const newPosition = [position[0] + 0.001, position[1] + 0.001];
+    setPosition(newPosition);
+    await sendPosition({ roomId, roomToken, user, newPosition });
+  };
 
-  useEffect(() => {
-    let lastSentTime = 0;
+  // useEffect(() => {
+  //   let lastSentTime = 0;
 
-    const watchId = navigator.geolocation.watchPosition(
+  //   if (!navigator.geolocation) {
+  //     setError("En attente de géolocalisation");
+  //     return;
+  //   }
+
+  //   const watchId = navigator.geolocation.watchPosition(
+  //     (pos) => {
+  //       const coords = [pos.coords.latitude, pos.coords.longitude];
+
+  //       if (
+  //         typeof coords[0] !== "number" ||
+  //         typeof coords[1] !== "number" ||
+  //         isNaN(coords[0]) ||
+  //         isNaN(coords[1])
+  //       ) {
+  //         setError("En attente de géolocalisation");
+  //         return;
+  //       }
+
+  //       setError();
+  //       setPosition(coords);
+
+  //       const now = Date.now();
+  //       if (now - lastSentTime >= 10000) {
+  //         lastSentTime = now;
+
+  //         const newPosition = coords;
+  //         sendPosition({ roomId, roomToken, user, newPosition }); // no await
+  //       }
+  //     },
+  //     (err) => {
+  //       console.error(err);
+  //       setError("En attente de géolocalisation");
+  //     },
+  //     {
+  //       enableHighAccuracy: true,
+  //     }
+  //   );
+
+  //   return () => navigator.geolocation.clearWatch(watchId);
+  // }, []);
+
+  const startGeolocationWatch = () => {
+    if (!navigator.geolocation) {
+      setError("Géolocalisation non supportée");
+      return;
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = [pos.coords.latitude, pos.coords.longitude];
+
+        if (
+          typeof coords[0] !== "number" ||
+          typeof coords[1] !== "number" ||
+          isNaN(coords[0]) ||
+          isNaN(coords[1])
+        ) {
+          setError("En attente de géolocalisation");
+          return;
+        }
+
+        setError(undefined);
         setPosition(coords);
 
         const now = Date.now();
-        if (now - lastSentTime >= 10000) {
-          lastSentTime = now;
-
-          const newPosition = coords;
-          sendPosition({ roomId, roomToken, user, newPosition }); // no await
+        if (now - lastSentTimeRef.current >= 10000) {
+          lastSentTimeRef.current = now;
+          sendPosition({ roomId, roomToken, user, newPosition: coords });
         }
       },
-      (err) => console.error(err),
+      (err) => {
+        console.error(err);
+        setError("En attente de géolocalisation");
+      },
       {
         enableHighAccuracy: true,
       }
     );
+  };
 
-    return () => navigator.geolocation.clearWatch(watchId);
+  // relaunch watch when finally allowed
+  useEffect(() => {
+    startGeolocationWatch();
+
+    if (navigator.permissions) {
+      navigator.permissions
+        .query({ name: "geolocation" })
+        .then((permissionStatus) => {
+          permissionStatus.onchange = () => {
+            if (permissionStatus.state === "granted") {
+              setError(undefined);
+              navigator.geolocation.clearWatch(watchIdRef.current);
+              startGeolocationWatch();
+            }
+          };
+        });
+    }
+
+    return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  // back if backgrounded app
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        if (watchIdRef.current) {
+          navigator.geolocation.clearWatch(watchIdRef.current);
+        }
+        startGeolocationWatch();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   if (showAlert) return <Alert onClick={() => setShowAlert(false)} />;
@@ -1198,6 +1310,12 @@ const Map = ({
           doubleClickZoom={false}
           touchZoom={false}
         >
+          {error && (
+            <div className="absolute z-[1000] left-1/2 translate-x-[-50%] top-1/2 translate-y-[-50%] flex justify-center items-center text-center font-semibold text-2xl text-red-700 w-full bg-red-100">
+              {error}
+            </div>
+          )}
+
           {view === "user" && (
             <UpdateView
               center={position ? position : undefined}
@@ -1302,12 +1420,12 @@ const Map = ({
             </Marker>
           )}
 
-          {/* <button
+          <button
             onClick={simulateNewPosition}
             style={{ position: "absolute", zIndex: 1000, bottom: 0 }}
           >
             Simuler
-          </button> */}
+          </button>
           {isAdmin && (
             <div
               onClick={() => goNewHunting({ gameData, roomId, roomToken })}
@@ -1316,14 +1434,6 @@ const Map = ({
               Reset
             </div>
           )}
-          {/* <button
-            onClick={() => (activatedWatch.current = !activatedWatch.current)}
-            style={{ position: "absolute", zIndex: 1000, bottom: 0, right: 0 }}
-          >
-            {activatedWatch.current
-              ? "Désactiver\u00A0watch"
-              : "Activer\u00A0watch"}
-          </button> */}
         </MapContainer>
       </div>
     </>
@@ -1348,14 +1458,14 @@ const HunterGrab = ({
 
   const ConfirmButtons = useCallback(
     () => (
-      <div className="absolute bottom-10 w-2/3 flex justify-center gap-2">
+      <div className="absolute bottom-10 w-2/3 flex justify-center gap-8">
         <div
           onClick={(e) => {
             e.stopPropagation();
             setShowHunterGrab(false);
             sendGrab({ grabber: userName, grabbed: aimed, roomId, roomToken });
           }}
-          className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center"
+          className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center rounded-md"
         >
           <CheckIcon className="h-10 w-10" />
         </div>
@@ -1365,7 +1475,7 @@ const HunterGrab = ({
             setShowConfirm(false);
             setAimed();
           }}
-          className="border border-red-700 bg-red-300 text-red-700 p-1 w-full flex justify-center items-center"
+          className="border border-red-700 bg-red-300 text-red-700 p-1 w-full flex justify-center items-center rounded-md"
         >
           <XMarkIcon className="h-10 w-10" />
         </div>
@@ -1426,7 +1536,7 @@ const ImGrabbedBy = ({ grabbed, grabber, roomId, roomToken }) => {
   return (
     <div className="w-full h-full flex flex-col justify-center items-center relative">
       <div className="text-3xl font-semibold">{grabber} vous a attrapé !</div>
-      <div className="absolute bottom-10 w-2/3 flex justify-center gap-2">
+      <div className="absolute bottom-10 w-2/3 flex justify-center gap-8">
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -1438,7 +1548,7 @@ const ImGrabbedBy = ({ grabbed, grabber, roomId, roomToken }) => {
               roomToken,
             });
           }}
-          className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center"
+          className="border border-green-700 bg-green-300 text-green-700 p-1 w-full flex justify-center items-center rounded-md"
         >
           <CheckIcon className="h-10 w-10" />
         </div>
@@ -1453,7 +1563,7 @@ const ImGrabbedBy = ({ grabbed, grabber, roomId, roomToken }) => {
               roomToken,
             });
           }}
-          className="border border-red-700 bg-red-300 text-red-700 p-1 w-full flex justify-center items-center"
+          className="border border-red-700 bg-red-300 text-red-700 p-1 w-full flex justify-center items-center rounded-md"
         >
           <XMarkIcon className="h-10 w-10" />
         </div>
@@ -1643,7 +1753,7 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
         gameData={gameData}
       />
 
-      <div className="flex w-full h-20 justify-evenly items-center mb-10">
+      <div className="flex w-full h-20 justify-evenly items-center px-4 mb-10">
         <div
           onClick={() => {
             setView("all");
@@ -1651,7 +1761,7 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
             if (geolocation !== "manual") return;
             getPositions({});
           }}
-          className={`w-20 h-full flex justify-center items-center relative ${
+          className={`h-full w-fit min-w-20 flex justify-center items-center relative ${
             view === "all" &&
             (isRevealReady
               ? "border border-amber-700"
@@ -1953,6 +2063,7 @@ export default function Hunting({
           roomId={roomId}
           roomToken={roomToken}
           setShowNext={setShowNext}
+          isEnded={isEnded}
         />
       )}
 
@@ -1964,6 +2075,7 @@ export default function Hunting({
           roomId={roomId}
           roomToken={roomToken}
           setShowNext={setShowNext}
+          isEnded={isEnded}
         />
       )}
 

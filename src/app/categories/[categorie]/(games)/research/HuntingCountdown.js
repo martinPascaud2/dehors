@@ -177,6 +177,7 @@ export function NextLocationCountdown({
 
   const leftMinutes = Math.floor(leftMilliseconds / 1000 / 60);
   const leftSeconds = Math.floor((leftMilliseconds / 1000) % 60);
+  const minDigitNumber = leftMinutes.toString().length;
 
   if (
     (leftMilliseconds === 0 || isRevealReady) &&
@@ -205,15 +206,17 @@ export function NextLocationCountdown({
       {(leftMinutes > 0 || (leftMinutes === 0 && leftSeconds >= 0)) && (
         <>
           {leftMinutes > 0 && (
-            <div className="font-bold w-full h-full flex justify-center items-center">
-              <div className="font-bold w-[1ch] h-full flex justify-end items-center">
+            <div className="font-bold h-full flex justify-center items-center">
+              <div
+                className={`font-bold w-[${minDigitNumber}ch] h-full flex justify-end items-center`}
+              >
                 {leftMinutes}
               </div>
               <span>{leftMinutes ? "\u00A0:\u00A0" : ""}</span>
             </div>
           )}
           {
-            <div className="font-bold w-full h-full flex justify-center items-center">
+            <div className="font-bold h-full flex justify-center items-center">
               <div className="font-bold w-[2ch] h-full flex justify-center items-center">
                 {leftSeconds < 10 ? "0" : ""}
                 {leftSeconds}

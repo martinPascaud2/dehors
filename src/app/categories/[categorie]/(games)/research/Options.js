@@ -111,6 +111,7 @@ export default function ResearchOptions({
         min={1}
         max={360}
         last={lastParams?.countDownTime}
+        def={15}
       />
 
       <div className="w-full flex justify-center items-center my-2">
