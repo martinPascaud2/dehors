@@ -1304,11 +1304,15 @@ const Map = ({
           id="map"
           center={position ? position : undefined}
           zoom={zoom}
-          style={{ height: "70vh", width: "90%" }}
+          style={{
+            height: "70vh",
+            width: "90%",
+          }}
           zoomControl={true}
           scrollWheelZoom={false}
           doubleClickZoom={false}
           touchZoom={false}
+          className="border border-4 border-black"
         >
           {error && (
             <div className="absolute z-[1000] left-1/2 translate-x-[-50%] top-1/2 translate-y-[-50%] flex justify-center items-center text-center font-semibold text-2xl text-red-700 w-full bg-red-100">
