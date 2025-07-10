@@ -1155,12 +1155,12 @@ const Map = ({
   const lastSentTimeRef = useRef(0);
 
   // dev
-  const simulateNewPosition = async () => {
-    if (!position) return;
-    const newPosition = [position[0] + 0.001, position[1] + 0.001];
-    setPosition(newPosition);
-    await sendPosition({ roomId, roomToken, user, newPosition });
-  };
+  // const simulateNewPosition = async () => {
+  //   if (!position) return;
+  //   const newPosition = [position[0] + 0.001, position[1] + 0.001];
+  //   setPosition(newPosition);
+  //   await sendPosition({ roomId, roomToken, user, newPosition });
+  // };
 
   // useEffect(() => {
   //   let lastSentTime = 0;
@@ -1420,12 +1420,12 @@ const Map = ({
             </Marker>
           )}
 
-          <button
+          {/* <button
             onClick={simulateNewPosition}
             style={{ position: "absolute", zIndex: 1000, bottom: 0 }}
           >
             Simuler
-          </button>
+          </button> */}
           {isAdmin && (
             <div
               onClick={() => goNewHunting({ gameData, roomId, roomToken })}
