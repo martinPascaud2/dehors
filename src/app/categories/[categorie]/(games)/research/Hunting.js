@@ -1595,13 +1595,12 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
     if (!grabEvents || !grabEvents[user.name]) return null;
     return grabEvents[user.name];
   }, [gameData.grabEvents, user.name]);
+  const hunteds = gameData?.teams?.hunteds;
   const isAlive = useMemo(() => {
-    if (gamerRole === "hunter" || !gameData?.teams?.hunteds) return true;
-    const gamerStatus = gameData.teams.hunteds.find(
-      (hunted) => hunted.name === user.name
-    );
-    return gamerStatus.alive;
-  }, [gamerRole, gameData.teams.hunteds, user.name]);
+    if (gamerRole === "hunter" || !hunteds) return true;
+    const gamerStatus = hunteds.find((hunted) => hunted.name === user.name);
+    return gamerStatus?.alive ?? true;
+  }, [gamerRole, hunteds, user.name]);
   const deathsPositions = useMemo(() => {
     return gameData.deathsPositions;
   }, [gameData.deathsPositions]);
