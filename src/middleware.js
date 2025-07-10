@@ -11,7 +11,8 @@ export async function middleware(request) {
     request.nextUrl.pathname.startsWith("/icon") ||
     request.nextUrl.pathname.startsWith("/categoriesIcons/") ||
     request.nextUrl.pathname.startsWith("/smoke") ||
-    request.nextUrl.pathname.startsWith("/position")
+    request.nextUrl.pathname.startsWith("/position") ||
+    request.nextUrl.pathname.startsWith("/hereIcon")
   ) {
     return NextResponse.next();
   }
@@ -55,7 +56,8 @@ export async function middleware(request) {
     request.nextUrl.pathname !== "/api/pusherAuth/" &&
     !request.nextUrl.pathname.startsWith("/categoriesIcons/") &&
     !request.nextUrl.pathname.startsWith("/smoke") &&
-    !request.nextUrl.pathname.startsWith("/position")
+    !request.nextUrl.pathname.startsWith("/position") &&
+    !request.nextUrl.pathname.startsWith("/hereIcon")
   ) {
     return NextResponse.redirect(new URL("/", request.url));
   }
