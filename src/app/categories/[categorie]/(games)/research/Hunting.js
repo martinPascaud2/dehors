@@ -1596,7 +1596,7 @@ const PlayingPhase = ({ isAdmin, user, roomId, roomToken, gameData }) => {
     return grabEvents[user.name];
   }, [gameData.grabEvents, user.name]);
   const isAlive = useMemo(() => {
-    if (gamerRole === "hunter") return true;
+    if (gamerRole === "hunter" || !gameData?.teams?.hunteds) return true;
     const gamerStatus = gameData.teams.hunteds.find(
       (hunted) => hunted.name === user.name
     );
