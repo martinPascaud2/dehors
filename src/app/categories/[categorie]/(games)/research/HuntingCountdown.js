@@ -14,6 +14,7 @@ export default function HuntingCountdown({
   roomId,
   roomToken,
   user,
+  vsTeam,
 }) {
   const [offset, setOffset] = useState(0);
   const intervalRef = useRef(null);
@@ -41,7 +42,7 @@ export default function HuntingCountdown({
     function updateTime() {
       const current = Date.now() + offset;
 
-      const remaining = Math.max(finishCountdownDate - current, 0);
+      const remaining = Math.max(finishCountdownDate - current - 100000, 0);
       setLeftMilliseconds(remaining);
 
       if (remaining === 0 && !hasSent) {
@@ -73,6 +74,7 @@ export default function HuntingCountdown({
             user,
             newPosition: coords,
             isHidding: true,
+            team: vsTeam,
           }); // no await
           sentGeolocRef.current = true;
         }
@@ -190,7 +192,7 @@ export function NextLocationCountdown({
       </div>
     );
 
-  if (leftMilliseconds === 0 && gamerRole === "hunted")
+  if (!leftMilliseconds && gamerRole === "hunted")
     return (
       <div
         className={`w-full h-full flex justify-center items-center text-red-700 text-5xl ${specialElite.className} mt-4`}

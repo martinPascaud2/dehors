@@ -258,11 +258,30 @@ export async function goToHidding({ roomId, roomToken }) {
         alive: true,
       })),
     };
+  } else if (distribution === "VS") {
+    // console.log("proposed", proposed);
+    const { red, blue } = proposed;
+    const redHunters = red.hunters;
+    const redHunteds = red.hunteds.map((hunted) => ({
+      name: hunted,
+      alive: true,
+    }));
+    const blueHunters = blue.hunters;
+    const blueHunteds = blue.hunteds.map((hunted) => ({
+      name: hunted,
+      alive: true,
+    }));
+    teams = {
+      red: { hunters: redHunters, hunteds: redHunteds },
+      blue: { hunters: blueHunters, hunteds: blueHunteds },
+    };
   }
 
   const startDate = Date.now() + 120000; // 2 mn
 
   const newData = { ...roomData, startDate, teams, phase: "hidding" };
+
+  // console.log("newData", newData);
 
   await saveAndDispatchData({ roomId, roomToken, newData });
 }
@@ -284,24 +303,46 @@ export async function goToPlaying({ roomId, roomToken }) {
     return;
   }
 
-  const { geolocation } = roomData.options;
+  const { geolocation, distribution } = roomData.options;
 
-  const lastLocation = 0;
+  if (distribution === "FFA") {
+    const lastLocation = 0;
 
-  const nextLocation =
-    geolocation === "automatic"
-      ? Date.now() + roomData.options.countDownTime
-      : null; // null for first manual
+    const nextLocation =
+      geolocation === "automatic"
+        ? Date.now() + roomData.options.countDownTime
+        : null; // null for first manual
 
-  const newData = {
-    ...roomData,
-    phase: "playing",
-    lastLocation,
-    nextLocation,
-  };
+    const newData = {
+      ...roomData,
+      phase: "playing",
+      lastLocation,
+      nextLocation,
+    };
 
-  await saveAndDispatchData({ roomId, roomToken, newData });
-  await free({ roomId });
+    await saveAndDispatchData({ roomId, roomToken, newData });
+    await free({ roomId });
+  } else if (distribution === "VS") {
+    const lastLocations = { red: 0, blue: 0 };
+
+    const nextLocations =
+      geolocation === "automatic"
+        ? {
+            red: Date.now() + roomData.options.countDownTime,
+            blue: Date.now() + roomData.options.countDownTime,
+          }
+        : { red: null, blue: null }; // null for first manual
+
+    const newData = {
+      ...roomData,
+      phase: "playing",
+      lastLocations,
+      nextLocations,
+    };
+
+    await saveAndDispatchData({ roomId, roomToken, newData });
+    await free({ roomId });
+  }
 }
 
 export async function sendPosition({
@@ -309,7 +350,10 @@ export async function sendPosition({
   user,
   newPosition,
   isHidding = false,
+  team,
 }) {
+  await wait({ roomId });
+
   const positionUpdatePromise = user.multiGuest
     ? prisma.multiguest.upsert({
         where: { id: user.dataId },
@@ -353,57 +397,166 @@ export async function sendPosition({
   const userMap = new Map(users.map((u) => [u.id, u.huntingPosition]));
   const guestMap = new Map(guests.map((g) => [g.id, g.huntingPosition]));
 
-  const hunterSet = new Set(teams.hunters);
-  const huntedMap = new Map(
-    teams.hunteds.map((hunted) => [hunted.name, hunted.alive])
-  );
+  let allPositions;
+  if (distribution === "FFA") {
+    const hunterSet = new Set(teams.hunters);
+    const huntedMap = new Map(
+      teams.hunteds.map((hunted) => [hunted.name, hunted.alive])
+    );
 
-  const allPositions = gamers.map((gamer) => {
-    const isGuest = gamer.multiGuest;
-    const huntingPosition = isGuest
-      ? guestMap.get(gamer.dataId)
-      : userMap.get(gamer.id);
+    allPositions = gamers.map((gamer) => {
+      const isGuest = gamer.multiGuest;
+      const huntingPosition = isGuest
+        ? guestMap.get(gamer.dataId)
+        : userMap.get(gamer.id);
 
-    let role, alive;
-    if (distribution === "FFA") {
+      let role, alive;
       if (hunterSet.has(gamer.name)) {
         role = "hunter";
       } else {
         role = "hunted";
         alive = huntedMap.get(gamer.name);
       }
-    }
 
-    return {
-      name: gamer.name,
-      latitude: huntingPosition?.[0] ?? null,
-      longitude: huntingPosition?.[1] ?? null,
-      role,
-      alive,
+      return {
+        name: gamer.name,
+        latitude: huntingPosition?.[0] ?? null,
+        longitude: huntingPosition?.[1] ?? null,
+        role,
+        alive,
+      };
+    });
+  } else if (distribution === "VS") {
+    const redHunterSet = new Set(teams.red.hunters);
+    const blueHunterSet = new Set(teams.blue.hunters);
+    const redHuntedMap = new Map(
+      teams.red.hunteds.map((hunted) => [hunted.name, hunted.alive])
+    );
+    const blueHuntedMap = new Map(
+      teams.blue.hunteds.map((hunted) => [hunted.name, hunted.alive])
+    );
+
+    allPositions = { red: [], blue: [] };
+    gamers.forEach((gamer) => {
+      let role, alive, team;
+      if (redHunterSet.has(gamer.name)) {
+        role = "hunter";
+        team = "red";
+      } else if (redHuntedMap.has(gamer.name)) {
+        role = "hunted";
+        team = "red";
+        alive = redHuntedMap.get(gamer.name);
+      } else if (blueHunterSet.has(gamer.name)) {
+        role = "hunter";
+        team = "blue";
+      } else {
+        role = "hunted";
+        team = "blue";
+        alive = blueHuntedMap.get(gamer.name);
+      }
+
+      const isGuest = gamer.multiGuest;
+      const huntingPosition = isGuest
+        ? guestMap.get(gamer.dataId)
+        : userMap.get(gamer.id);
+
+      allPositions[team].push({
+        name: gamer.name,
+        latitude: huntingPosition?.[0] ?? null,
+        longitude: huntingPosition?.[1] ?? null,
+        role,
+        alive,
+      });
+
+      // return {
+      //   name: gamer.name,
+      //   latitude: huntingPosition?.[0] ?? null,
+      //   longitude: huntingPosition?.[1] ?? null,
+      //   role,
+      //   alive,
+      // };
+    });
+
+    // allPositions = gamers.map((gamer) => {
+    //   const isGuest = gamer.multiGuest;
+    //   const huntingPosition = isGuest
+    //     ? guestMap.get(gamer.dataId)
+    //     : userMap.get(gamer.id);
+
+    //   let role, alive;
+    //     if (hunterSet.has(gamer.name)) {
+    //       role = "hunter";
+    //     } else {
+    //       role = "hunted";
+    //       alive = huntedMap.get(gamer.name);
+    //     }
+
+    //   return {
+    //     name: gamer.name,
+    //     latitude: huntingPosition?.[0] ?? null,
+    //     longitude: huntingPosition?.[1] ?? null,
+    //     role,
+    //     alive,
+    //   };
+    // });
+  }
+
+  if (distribution === "FFA") {
+    const { lastLocation, lastPositions } = roomData;
+    const { countDownTime } = options;
+
+    const shouldUpdateLastPositions = isHidding
+      ? true
+      : Date.now() > lastLocation + countDownTime;
+
+    const newLastPositions = shouldUpdateLastPositions
+      ? allPositions
+      : lastPositions;
+
+    const newData = {
+      ...roomData,
+      positions: allPositions,
+      lastPositions: newLastPositions,
     };
-  });
 
-  let { lastLocation, lastPositions } = roomData;
-  const { countDownTime } = options;
+    await saveData({ roomId, newData });
+    await free({ roomId });
+  } else if (distribution === "VS") {
+    const { lastLocations, lastPositions } = roomData;
+    const { countDownTime } = options;
 
-  const shouldUpdateLastPositions = isHidding
-    ? true
-    : Date.now() > lastLocation + countDownTime;
+    const shouldUpdateLastPositions = isHidding
+      ? true
+      : Date.now() > lastLocations[team] + countDownTime;
 
-  const newLastPositions = shouldUpdateLastPositions
-    ? allPositions
-    : lastPositions;
+    const newLastPositions = shouldUpdateLastPositions
+      ? { ...allPositions, [team]: allPositions[team] }
+      : lastPositions;
 
-  const newData = {
-    ...roomData,
-    positions: allPositions,
-    lastPositions: newLastPositions,
-  };
+    // console.log("lastPositions", lastPositions);
+    // console.log("lastPositions.red", lastPositions?.red);
+    // console.log("lastPositions.blue", lastPositions?.blue);
 
-  await saveData({ roomId, newData });
+    const newData = {
+      ...roomData,
+      positions: allPositions,
+      lastPositions: newLastPositions,
+    };
+
+    // console.log("newData", newData);
+
+    await saveData({ roomId, newData });
+    await free({ roomId });
+  }
 }
 
-export async function getLastPositions({ roomId, roomToken, gamerRole }) {
+export async function getLastPositions({
+  roomId,
+  roomToken,
+  gamerRole,
+  vsTeam,
+  otherTeam,
+}) {
   try {
     await wait({ roomId });
 
@@ -414,50 +567,120 @@ export async function getLastPositions({ roomId, roomToken, gamerRole }) {
       })
     ).gameData;
 
-    const { lastLocation, nextLocation, positions, lastPositions } = roomData;
-    const { countDownTime } = roomData.options;
+    const { distribution } = roomData.options;
 
-    let newLastPositions;
-    let newLastLocation;
-    let newNextLocation;
-    let shouldDispatch = false;
-    if (
-      (nextLocation - Date.now() < 0 || nextLocation === null) &&
-      gamerRole === "hunter"
-    ) {
-      newLastLocation = Date.now();
-      newNextLocation = Date.now() + countDownTime;
-      newLastPositions = positions;
-      shouldDispatch = true;
-    } else {
-      newLastLocation = lastLocation;
-      newNextLocation = nextLocation;
-      newLastPositions = lastPositions;
+    if (distribution === "FFA") {
+      const { lastLocation, nextLocation, positions, lastPositions } = roomData;
+      const { countDownTime } = roomData.options;
+
+      let newLastPositions;
+      let newLastLocation;
+      let newNextLocation;
+      let shouldDispatch = false;
+      if (
+        (nextLocation - Date.now() < 0 || nextLocation === null) &&
+        gamerRole === "hunter"
+      ) {
+        newLastLocation = Date.now();
+        newNextLocation = Date.now() + countDownTime;
+        newLastPositions = positions;
+        shouldDispatch = true;
+      } else {
+        newLastLocation = lastLocation;
+        newNextLocation = nextLocation;
+        newLastPositions = lastPositions;
+      }
+
+      const filteredLastPositions =
+        gamerRole === "hunter"
+          ? newLastPositions
+          : newLastPositions.filter((pos) => pos.role === "hunted");
+
+      const newData = {
+        ...roomData,
+        lastPositions: newLastPositions,
+        lastLocation: newLastLocation,
+        nextLocation: newNextLocation,
+      };
+
+      shouldDispatch &&
+        (await saveAndDispatchData({ roomId, roomToken, newData }));
+      await free({ roomId });
+      return filteredLastPositions;
+    } else if (distribution === "VS") {
+      const { lastLocations, nextLocations, positions, lastPositions } =
+        roomData;
+      const { countDownTime } = roomData.options;
+
+      let newLastPositions;
+      let newLastLocations;
+      let newNextLocations;
+      let shouldDispatch = false;
+      if (
+        (nextLocations[vsTeam] - Date.now() < 0 ||
+          nextLocations[vsTeam] === null) &&
+        gamerRole === "hunter"
+      ) {
+        newLastLocations = {
+          ...lastLocations,
+          [vsTeam]: Date.now(),
+        };
+        newNextLocations = {
+          ...nextLocations,
+          [vsTeam]: Date.now() + countDownTime,
+        };
+        newLastPositions = {
+          ...lastPositions,
+          [otherTeam]: positions[otherTeam],
+        };
+        shouldDispatch = true;
+      } else {
+        newLastLocations = lastLocations;
+        newNextLocations = nextLocations;
+        newLastPositions = lastPositions;
+      }
+
+      let filteredLastPositions;
+      if (gamerRole === "hunter") {
+        const otherHunters = newLastPositions[vsTeam].filter(
+          (pos) => pos.role === "hunter"
+        );
+        const aimeds = newLastPositions[otherTeam].filter(
+          (pos) => pos.role === "hunted"
+        );
+        filteredLastPositions = [...otherHunters, ...aimeds];
+        console.log("filteredLastPositions", filteredLastPositions);
+      } else if (gamerRole === "hunted") {
+        filteredLastPositions = newLastPositions[vsTeam].filter(
+          (pos) => pos.role === "hunted"
+        );
+      }
+
+      // const filteredLastPositions =
+      //   gamerRole === "hunter"
+      //     ? newLastPositions[team]
+      //     : newLastPositions[team].filter((pos) => pos.role === "hunted");
+
+      const newData = {
+        ...roomData,
+        lastPositions: newLastPositions,
+        lastLocations: newLastLocations,
+        nextLocations: newNextLocations,
+      };
+
+      shouldDispatch &&
+        (await saveAndDispatchData({ roomId, roomToken, newData }));
+      await free({ roomId });
+      // console.log("passé ici", team);
+      return filteredLastPositions;
     }
-
-    const filteredLastPositions =
-      gamerRole === "hunter"
-        ? newLastPositions
-        : newLastPositions.filter((pos) => pos.role === "hunted");
-
-    const newData = {
-      ...roomData,
-      lastPositions: newLastPositions,
-      lastLocation: newLastLocation,
-      nextLocation: newNextLocation,
-    };
-
-    shouldDispatch &&
-      (await saveAndDispatchData({ roomId, roomToken, newData }));
-    await free({ roomId });
-    return filteredLastPositions;
   } catch (error) {
     console.error("getLastPositions error:", error);
   } finally {
   }
 }
 
-export async function sendGrab({ grabber, grabbed, roomId, roomToken }) {
+export async function sendGrab({ grabber, grabbed, roomId, roomToken, team }) {
   await wait({ roomId });
 
   const roomData = (
@@ -467,15 +690,31 @@ export async function sendGrab({ grabber, grabbed, roomId, roomToken }) {
     })
   ).gameData;
 
-  const newGrabEvents = roomData.grabEvents || {};
-  newGrabEvents[grabbed] = grabber;
+  const { distribution } = roomData.options;
 
-  const newData = {
-    ...roomData,
-    grabEvents: newGrabEvents,
-  };
+  if (distribution === "FFA") {
+    const newGrabEvents = roomData.grabEvents || {};
+    newGrabEvents[grabbed] = grabber;
 
-  await saveAndDispatchData({ roomId, roomToken, newData });
+    const newData = {
+      ...roomData,
+      grabEvents: newGrabEvents,
+    };
+
+    await saveAndDispatchData({ roomId, roomToken, newData });
+  } else if (distribution === "VS") {
+    const grabEvents = roomData.grabEvents || {};
+    const newTeamGrabEvents = grabEvents[team] || {};
+    newTeamGrabEvents[grabbed] = grabber;
+    const newGrabEvents = { ...grabEvents, [team]: newTeamGrabEvents };
+    const newData = {
+      ...roomData,
+      grabEvents: newGrabEvents,
+    };
+
+    await saveAndDispatchData({ roomId, roomToken, newData });
+  }
+
   await free({ roomId });
 }
 
@@ -485,6 +724,8 @@ export async function amIGrabbed({
   grabber,
   roomId,
   roomToken,
+  vsTeam,
+  otherTeam,
 }) {
   await wait({ roomId });
 
@@ -495,77 +736,181 @@ export async function amIGrabbed({
     })
   ).gameData;
 
-  const { teams, grabEvents: newGrabEvents } = roomData;
+  const { distribution } = roomData.options;
+  if (distribution === "FFA") {
+    const { teams, grabEvents: newGrabEvents } = roomData;
 
-  if (!isGrabbed) {
-    newGrabEvents[grabbed] = null;
-    const newData = {
-      ...roomData,
-      grabEvents: newGrabEvents,
-    };
-    await saveAndDispatchData({ roomId, roomToken, newData });
-    await free({ roomId });
-  } else {
-    const { hunteds } = teams;
-
-    const hunted = hunteds.find((h) => h.name === grabbed);
-    const newHunted = { ...hunted, alive: false };
-    const newHunteds = hunteds.filter((h) => h.name !== grabbed);
-    newHunteds.push(newHunted);
-    const newTeams = { ...teams, hunteds: newHunteds };
-
-    const { positions, lastPositions } = roomData;
-    const deathsPositions = roomData.deathsPositions || [];
-    const grabbedPosition = positions.find((gamer) => gamer.name === grabbed);
-    const [grabbedLatitude, grabbedLongitude] = [
-      grabbedPosition.latitude,
-      grabbedPosition.longitude,
-    ];
-    const newDeathPositions = {
-      latitude: grabbedLatitude,
-      longitude: grabbedLongitude,
-      grabbed,
-      grabber,
-    };
-    const newDeathsPositions = [...deathsPositions, newDeathPositions];
-
-    const newPositions = positions.map((p) =>
-      p.name === grabbed ? { ...p, alive: false } : p
-    );
-    const newLastPositions = lastPositions.map((l) =>
-      l.name === grabbed ? { ...l, alive: false } : l
-    );
-
-    const newData = {
-      ...roomData,
-      teams: newTeams,
-      grabEvent: { grabbed, grabber },
-      positions: newPositions,
-      lastPositions: newLastPositions,
-      deathsPositions: newDeathsPositions,
-    };
-
-    if (!newTeams.hunteds.some((hunted) => hunted.alive)) {
+    if (!isGrabbed) {
+      newGrabEvents[grabbed] = null;
       const newData = {
         ...roomData,
-        teams: newTeams,
-        positions: newPositions,
-        lastPositions: newLastPositions,
-        deathsPositions: newDeathsPositions,
-        phase: "ending",
-        ended: true,
+        grabEvents: newGrabEvents,
       };
       await saveAndDispatchData({ roomId, roomToken, newData });
       await free({ roomId });
-      return;
-    }
+    } else {
+      const { hunteds } = teams;
 
-    await saveAndDispatchData({ roomId, roomToken, newData });
-    await free({ roomId });
+      const hunted = hunteds.find((h) => h.name === grabbed);
+      const newHunted = { ...hunted, alive: false };
+      const newHunteds = hunteds.filter((h) => h.name !== grabbed);
+      newHunteds.push(newHunted);
+      const newTeams = { ...teams, hunteds: newHunteds };
+
+      const { positions, lastPositions } = roomData;
+      const deathsPositions = roomData.deathsPositions || [];
+      const grabbedPosition = positions.find((gamer) => gamer.name === grabbed);
+      const [grabbedLatitude, grabbedLongitude] = [
+        grabbedPosition.latitude,
+        grabbedPosition.longitude,
+      ];
+      const newDeathPositions = {
+        latitude: grabbedLatitude,
+        longitude: grabbedLongitude,
+        grabbed,
+        grabber,
+      };
+      const newDeathsPositions = [...deathsPositions, newDeathPositions];
+
+      const newPositions = positions.map((p) =>
+        p.name === grabbed ? { ...p, alive: false } : p
+      );
+      const newLastPositions = lastPositions.map((l) =>
+        l.name === grabbed ? { ...l, alive: false } : l
+      );
+
+      if (!newTeams.hunteds.some((hunted) => hunted.alive)) {
+        const newData = {
+          ...roomData,
+          teams: newTeams,
+          positions: newPositions,
+          lastPositions: newLastPositions,
+          deathsPositions: newDeathsPositions,
+          phase: "ending",
+          ended: true,
+        };
+        await saveAndDispatchData({ roomId, roomToken, newData });
+        await free({ roomId });
+        return;
+      }
+
+      const newData = {
+        ...roomData,
+        teams: newTeams,
+        grabEvent: { grabbed, grabber },
+        positions: newPositions,
+        lastPositions: newLastPositions,
+        deathsPositions: newDeathsPositions,
+      };
+
+      await saveAndDispatchData({ roomId, roomToken, newData });
+      await free({ roomId });
+    }
+  } else if (distribution === "VS") {
+    const { teams, grabEvents } = roomData;
+    if (!isGrabbed) {
+      const newTeamGrabEvents = grabEvents[otherTeam];
+      console.log("newTeamGrabEvents", newTeamGrabEvents);
+      newTeamGrabEvents[grabbed] = null;
+      const newGrabEvents = { ...grabEvents, [otherTeam]: newTeamGrabEvents };
+
+      const newData = {
+        ...roomData,
+        grabEvents: newGrabEvents,
+      };
+      await saveAndDispatchData({ roomId, roomToken, newData });
+      await free({ roomId });
+    } else {
+      const azerteam = teams[vsTeam];
+      const { hunteds } = azerteam;
+
+      const hunted = hunteds.find((h) => h.name === grabbed);
+      const newHunted = { ...hunted, alive: false };
+      const newTeamHunteds = hunteds.filter((h) => h.name !== grabbed);
+      newTeamHunteds.push(newHunted);
+      const newTeam = { ...azerteam, hunteds: newTeamHunteds };
+      const newTeams = { ...teams, [vsTeam]: newTeam };
+
+      const { positions, lastPositions, vsGrabEvent } = roomData;
+      // const deathsPositions = roomData.deathsPositions || [];
+      const deathsPositions = roomData.deathsPositions || {};
+      const teamDeathsPositions = deathsPositions[vsTeam] || [];
+      if (teamDeathsPositions.some((dp) => dp.grabbed === grabbed)) {
+        await free({ roomId });
+        return;
+      }
+      // const grabbedPosition = positions.find((gamer) => gamer.name === grabbed);
+      const grabbedPosition = positions[vsTeam].find(
+        (gamer) => gamer.name === grabbed
+      );
+      const [grabbedLatitude, grabbedLongitude] = [
+        grabbedPosition.latitude,
+        grabbedPosition.longitude,
+      ];
+      const newDeathPositions = {
+        latitude: grabbedLatitude,
+        longitude: grabbedLongitude,
+        grabbed,
+        grabber,
+        date: Date.now(),
+      };
+      const newTeamDeathsPosition = [...teamDeathsPositions, newDeathPositions];
+      const newDeathsPositions = {
+        ...deathsPositions,
+        [vsTeam]: newTeamDeathsPosition,
+      };
+
+      const newTeamPositions = positions[vsTeam].map((p) =>
+        p.name === grabbed ? { ...p, alive: false } : p
+      );
+      const newPositions = { ...positions, [vsTeam]: newTeamPositions };
+
+      const newTeamLastPositions = lastPositions[vsTeam].map((l) =>
+        l.name === grabbed ? { ...l, alive: false } : l
+      );
+      const newLastPositions = {
+        ...lastPositions,
+        [vsTeam]: newTeamLastPositions,
+      };
+
+      if (!newTeams[vsTeam].hunteds.some((hunted) => hunted.alive)) {
+        const newData = {
+          ...roomData,
+          teams: newTeams,
+          positions: newPositions,
+          lastPositions: newLastPositions,
+          deathsPositions: newDeathsPositions,
+          winner: vsTeam === "red" ? "blue" : "red",
+          phase: "ending",
+          ended: true,
+        };
+        await saveAndDispatchData({ roomId, roomToken, newData });
+        await free({ roomId });
+        return;
+      }
+
+      const newVsGrabEvent = {
+        ...vsGrabEvent,
+        [otherTeam]: { grabbed, grabber },
+      };
+
+      const newData = {
+        ...roomData,
+        teams: newTeams,
+        // grabEvent: { grabbed, grabber },
+        vsGrabEvent: newVsGrabEvent,
+        positions: newPositions,
+        lastPositions: newLastPositions,
+        deathsPositions: newDeathsPositions,
+      };
+
+      await saveAndDispatchData({ roomId, roomToken, newData });
+      await free({ roomId });
+    }
   }
 }
 
-export async function resetGrabEvent({ roomId, roomToken }) {
+export async function resetGrabEvent({ roomId, roomToken, team }) {
   await wait({ roomId });
 
   const roomData = (
@@ -575,9 +920,18 @@ export async function resetGrabEvent({ roomId, roomToken }) {
     })
   ).gameData;
 
-  const newData = { ...roomData, grabEvent: null };
+  const { distribution } = roomData.options;
 
-  await saveAndDispatchData({ roomId, roomToken, newData });
+  if (distribution === "FFA") {
+    const newData = { ...roomData, grabEvent: null };
+    await saveAndDispatchData({ roomId, roomToken, newData });
+  } else if (distribution === "VS") {
+    const { vsGrabEvent } = roomData;
+    const newVsGrabEvent = { ...vsGrabEvent, [team]: null };
+    const newData = { ...roomData, vsGrabEvent: newVsGrabEvent };
+    await saveAndDispatchData({ roomId, roomToken, newData });
+  }
+
   await free({ roomId });
 }
 
@@ -616,10 +970,14 @@ export async function goNewHunting({
     positions: newPositions,
     deathsPositions: [],
     lastPositions: undefined,
-    lastLocation: Date.now(),
-    nextLocation: Date.now() + options.countDownTime,
+    lastLocation: undefined,
+    nextLocation: undefined,
+    lastLocations: undefined,
+    nextLocations: undefined,
     grabEvents: {},
     grabEvent: null,
+    vsGrabEvent: {},
+    winner: undefined,
     options,
     ended: newEnded,
   };

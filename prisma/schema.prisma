@@ -108,6 +108,7 @@ model Room {
   started          Boolean       @default(false)
   actionInProgress Boolean       @default(false)
   lockedAt         DateTime?
+  lockId           String?
   gameData         Json?
   haveLeft         Json?
   User             User[]
