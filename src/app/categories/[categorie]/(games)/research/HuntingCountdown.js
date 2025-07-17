@@ -42,7 +42,7 @@ export default function HuntingCountdown({
     function updateTime() {
       const current = Date.now() + offset;
 
-      const remaining = Math.max(finishCountdownDate - current, 0);
+      const remaining = Math.max(finishCountdownDate - current - 100000, 0);
       setLeftMilliseconds(remaining);
 
       if (remaining === 0 && !hasSent) {
