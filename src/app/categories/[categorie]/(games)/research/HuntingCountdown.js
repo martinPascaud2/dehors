@@ -18,9 +18,14 @@ export default function HuntingCountdown({
 }) {
   const [offset, setOffset] = useState(0);
   const intervalRef = useRef(null);
-  const [leftMilliseconds, setLeftMilliseconds] = useState(null);
+  // const [leftMilliseconds, setLeftMilliseconds] = useState(null);
   const [hasSent, setHasSent] = useState(false);
   const sentGeolocRef = useRef(false);
+
+  // new
+  const watchIdRef = useRef();
+  const leftMillisecondsRef = useRef(null);
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
     const syncTime = async () => {
@@ -42,8 +47,12 @@ export default function HuntingCountdown({
     function updateTime() {
       const current = Date.now() + offset;
 
-      const remaining = Math.max(finishCountdownDate - current - 100000, 0);
-      setLeftMilliseconds(remaining);
+      const remaining = Math.max(finishCountdownDate - current, 0);
+      // old
+      // setLeftMilliseconds(remaining);
+      // new
+      leftMillisecondsRef.current = remaining;
+      forceUpdate((n) => n + 1); // force re-render
 
       if (remaining === 0 && !hasSent) {
         onTimeUp?.();
@@ -58,14 +67,27 @@ export default function HuntingCountdown({
     return () => clearInterval(intervalRef.current);
   }, [finishCountdownDate, hasSent, onTimeUp, offset]);
 
-  useEffect(() => {
-    const watchId = navigator.geolocation.watchPosition(
+  // new
+  const startGeolocationWatch = () => {
+    if (!navigator.geolocation) return;
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = [pos.coords.latitude, pos.coords.longitude];
 
         if (
-          leftMilliseconds <= 15000 &&
-          leftMilliseconds !== null &&
+          typeof coords[0] !== "number" ||
+          typeof coords[1] !== "number" ||
+          isNaN(coords[0]) ||
+          isNaN(coords[1])
+        ) {
+          setError("En attente de géolocalisation");
+          return;
+        }
+
+        if (
+          leftMillisecondsRef.current <= 15000 &&
+          leftMillisecondsRef.current !== null &&
           !sentGeolocRef.current
         ) {
           sendPosition({
@@ -79,18 +101,99 @@ export default function HuntingCountdown({
           sentGeolocRef.current = true;
         }
       },
-      (err) => console.error(err),
+      (err) => {
+        console.error(err);
+        // setError("En attente de géolocalisation");
+      },
       {
         enableHighAccuracy: true,
       }
     );
+  };
 
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [leftMilliseconds, roomId, roomToken, user]);
+  // new
+  useEffect(() => {
+    startGeolocationWatch();
 
-  const leftMinutes = Math.floor(leftMilliseconds / 1000 / 60);
-  const leftSeconds = Math.floor((leftMilliseconds / 1000) % 60);
-  const leftCs = Math.floor((leftMilliseconds % 1000) / 10);
+    if (navigator.permissions) {
+      navigator.permissions
+        .query({ name: "geolocation" })
+        .then((permissionStatus) => {
+          permissionStatus.onchange = () => {
+            if (permissionStatus.state === "granted") {
+              // setError(undefined);
+              navigator.geolocation.clearWatch(watchIdRef.current);
+              startGeolocationWatch();
+            }
+          };
+        });
+    }
+
+    return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  // new
+  // back if backgrounded app
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        if (watchIdRef.current) {
+          navigator.geolocation.clearWatch(watchIdRef.current);
+        }
+        startGeolocationWatch();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // useEffect(() => {
+  //   const watchId = navigator.geolocation.watchPosition(
+  //     (pos) => {
+  //       const coords = [pos.coords.latitude, pos.coords.longitude];
+
+  //       if (
+  //         leftMilliseconds <= 15000 &&
+  //         leftMilliseconds !== null &&
+  //         !sentGeolocRef.current
+  //       ) {
+  //         sendPosition({
+  //           roomId,
+  //           roomToken,
+  //           user,
+  //           newPosition: coords,
+  //           isHidding: true,
+  //           team: vsTeam,
+  //         }); // no await
+  //         sentGeolocRef.current = true;
+  //       }
+  //     },
+  //     (err) => console.error(err),
+  //     {
+  //       enableHighAccuracy: true,
+  //     }
+  //   );
+
+  //   return () => navigator.geolocation.clearWatch(watchId);
+  // }, [leftMilliseconds, roomId, roomToken, user]);
+
+  // old
+  // const leftMinutes = Math.floor(leftMilliseconds / 1000 / 60);
+  // const leftSeconds = Math.floor((leftMilliseconds / 1000) % 60);
+  // const leftCs = Math.floor((leftMilliseconds % 1000) / 10);
+
+  // new
+  const leftMinutes = Math.floor(leftMillisecondsRef.current / 1000 / 60);
+  const leftSeconds = Math.floor((leftMillisecondsRef.current / 1000) % 60);
+  const leftCs = Math.floor((leftMillisecondsRef.current % 1000) / 10);
 
   return (
     <div
