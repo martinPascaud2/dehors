@@ -1101,14 +1101,15 @@ const HiddingPhase = ({ isAdmin, gameData, roomId, roomToken, user }) => {
         />
       </div>
 
-      {/* {isAdmin && (
+      {isAdmin && (
         <div
           onClick={() => goNewHunting({ gameData, roomId, roomToken })}
-          className="absolute bottom-0 left-0 text-white"
+          className="absolute bottom-8 left-8 text-white"
+          style={{ zIndex: 1000 }}
         >
           Reset
         </div>
-      )} */}
+      )}
     </div>
   );
 };
@@ -1286,7 +1287,7 @@ const Map = ({
 
   console.log("deathsPositions", deathsPositions);
 
-  const startGeolocationWatch = () => {
+  const startGeolocationWatch = useCallback(() => {
     if (!navigator.geolocation) {
       setError("Géolocalisation non supportée");
       return;
@@ -1329,7 +1330,7 @@ const Map = ({
         enableHighAccuracy: true,
       }
     );
-  };
+  }, [roomId, roomToken, user, vsTeam]);
 
   // relaunch watch when finally allowed
   useEffect(() => {
@@ -1342,7 +1343,9 @@ const Map = ({
           permissionStatus.onchange = () => {
             if (permissionStatus.state === "granted") {
               setError(undefined);
-              navigator.geolocation.clearWatch(watchIdRef.current);
+              if (watchIdRef.current) {
+                navigator.geolocation.clearWatch(watchIdRef.current);
+              }
               startGeolocationWatch();
             }
           };

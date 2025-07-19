@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 
 import getServerTime from "@/utils/getServerTime";
 import { sendPosition } from "./gameActions";
@@ -68,7 +68,7 @@ export default function HuntingCountdown({
   }, [finishCountdownDate, hasSent, onTimeUp, offset]);
 
   // new
-  const startGeolocationWatch = () => {
+  const startGeolocationWatch = useCallback(() => {
     if (!navigator.geolocation) return;
 
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -109,7 +109,7 @@ export default function HuntingCountdown({
         enableHighAccuracy: true,
       }
     );
-  };
+  }, [roomId, roomToken, user, vsTeam]);
 
   // new
   useEffect(() => {
@@ -122,7 +122,9 @@ export default function HuntingCountdown({
           permissionStatus.onchange = () => {
             if (permissionStatus.state === "granted") {
               // setError(undefined);
-              navigator.geolocation.clearWatch(watchIdRef.current);
+              if (watchIdRef.current) {
+                navigator.geolocation.clearWatch(watchIdRef.current);
+              }
               startGeolocationWatch();
             }
           };

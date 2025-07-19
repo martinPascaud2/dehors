@@ -2,7 +2,11 @@ import { randomUUID } from "crypto";
 
 const LOCK_TIMEOUT = 10000;
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 export default async function wait({ roomId, tries = 0 }) {
+  const delay = Math.min(tries * 100, 500);
+
   if (tries > 50) {
     throw new Error("Too many attempts");
   }
@@ -55,13 +59,13 @@ export default async function wait({ roomId, tries = 0 }) {
     });
 
     if (override.count === 0) {
-      await new Promise((r) => setTimeout(r, 200));
+      await sleep(delay);
       return wait({ roomId, tries: tries + 1 });
     }
 
     const check = await prisma.room.findUnique({ where: { id: roomId } });
     if (check.lockId !== lockId) {
-      await new Promise((r) => setTimeout(r, 200));
+      await sleep(delay);
       return wait({ roomId, tries: tries + 1 });
     }
 
